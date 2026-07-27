@@ -17,17 +17,66 @@ function toggleVRDisplay() {
     }
 }
 
+function getCurrentTheme() {
+    return document.documentElement.classList.contains('light-mode') ? 'light' : 'dark';
+}
+
+function applyTheme(theme) {
+    const darkIcon = document.getElementById('theme-toggle-dark-icon');
+    const lightIcon = document.getElementById('theme-toggle-light-icon');
+    const themeText = document.getElementById('theme-toggle-text');
+    const toggleBtn = document.getElementById('theme-toggle');
+
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+        if (darkIcon) darkIcon.classList.remove('hidden');
+        if (lightIcon) lightIcon.classList.add('hidden');
+        if (themeText) themeText.innerText = '라이트';
+        if (toggleBtn) toggleBtn.setAttribute('title', '스위치: 다크 모드로 변경');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+        if (darkIcon) darkIcon.classList.add('hidden');
+        if (lightIcon) lightIcon.classList.remove('hidden');
+        if (themeText) themeText.innerText = '다크';
+        if (toggleBtn) toggleBtn.setAttribute('title', '스위치: 라이트 모드로 변경');
+    }
+    localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+    const current = getCurrentTheme();
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+
+    // Refresh active TradingView charts with new theme
+    const ibmTickerInput = document.getElementById('ibm-ticker');
+    if (ibmTickerInput && ibmTickerInput.value) {
+        refreshChartWidget('ibm-chart-container', ibmTickerInput.value.trim().toUpperCase());
+    }
+    const vrCard = document.getElementById('vr-card');
+    const vrTickerInput = document.getElementById('vr-ticker');
+    if (vrCard && !vrCard.classList.contains('hidden') && vrTickerInput && vrTickerInput.value) {
+        refreshChartWidget('vr-chart-container', vrTickerInput.value.trim().toUpperCase());
+    }
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(savedTheme);
+}
+
 function refreshChartWidget(containerId, ticker) {
+    const activeTheme = getCurrentTheme();
     if (document.getElementById(containerId)) {
         new TradingView.widget({
             "autosize": true,
             "symbol": ticker, 
             "interval": "D",
             "timezone": "Asia/Seoul",
-            "theme": "dark",
+            "theme": activeTheme,
             "style": "1", 
             "locale": "ko",
-            "toolbar_bg": "#111827",
+            "toolbar_bg": activeTheme === 'dark' ? "#111827" : "#ffffff",
             "enable_publishing": false,
             "hide_top_toolbar": true,
             "hide_legend": true,
@@ -70,6 +119,21 @@ function toggleOrderDetail(orderId) {
     }
 }
 
+// 💡 Alpaca 실시간 계좌 잔고 (구매력) 조회
+async function fetchAccountInfo() {
+    try {
+        const res = await fetch(`/api/account/${curAcc}`);
+        if (res.ok) {
+            const data = await res.json();
+            const formattedBP = Number(data.buying_power).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const elem = document.getElementById('buying-power-val');
+            if (elem) elem.innerText = `$${formattedBP}`;
+        }
+    } catch(e) {
+        console.error("계좌 정보 로드 실패:", e);
+    }
+}
+
 // 💡 [새로 추가] 백엔드에서 주문 히스토리를 긁어와 리스트 UI를 그리는 메인 엔진
 async function fetchOrders() {
     try {
@@ -103,7 +167,7 @@ async function fetchOrders() {
             const priceText = o.limit_price ? `$${o.limit_price}` : '시장가';
             
             const html = `
-                <div class="border border-zinc-800/60 rounded-xl overflow-hidden bg-zinc-950/50 hover:border-zinc-700 transition-colors">
+                <div class="border border-zinc-800/60 rounded-md overflow-hidden bg-zinc-950/50 hover:border-zinc-700 transition-colors">
                     <div class="p-3 flex justify-between items-center cursor-pointer select-none" onclick="toggleOrderDetail('${o.id}')">
                         <div class="flex flex-col">
                             <span class="text-xs font-bold ${sideColor}">${sideText} ${o.symbol}</span>
@@ -181,7 +245,7 @@ async function sendIBM() {
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">투자 종목</span><span class="font-bold text-zinc-100 text-sm">${t}</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">스케줄 배정</span><span class="font-medium text-zinc-200">$${b} / ${d}일 분할</span></li>
         <li class="flex justify-between pt-1"><span class="text-zinc-400 font-semibold">금일 총 매수 예정</span><span class="font-bold text-emerald-400">${sharesText} (각 0.5회분 분할)</span></li>
-        <li class="flex flex-col gap-2 bg-zinc-950 p-3 rounded-xl mt-3 text-[11px] text-zinc-400 border border-zinc-800/30 leading-relaxed">
+        <li class="flex flex-col gap-2 bg-zinc-950 p-3 rounded-md mt-3 text-[11px] text-zinc-400 border border-zinc-800/30 leading-relaxed">
             <div class="text-zinc-500 font-semibold border-b border-zinc-900 pb-1 mb-1">📋 전송 예정인 4중 오더 구성 명세</div>
             <div class="flex justify-between"><span>1️⃣ 매수: 평균단가 기준</span><span class="text-cyan-400 font-medium">LOC 매수</span></div>
             <div class="flex justify-between"><span>2️⃣ 매수: 평단가 +5% 인상 기준</span><span class="text-cyan-400 font-medium">LOC 매수</span></div>
@@ -198,7 +262,8 @@ async function sendIBM() {
         const d2 = await res.json(); 
         alert(d2.message); 
         fetchIBM();
-        fetchOrders(); // 💡 주문 후 우측 히스토리 패널 자동 갱신
+        fetchAccountInfo();
+        fetchOrders(); // 💡 주문 후 우측 히스토리 패널 및 잔고 자동 갱신
     });
 }
 
@@ -222,7 +287,8 @@ async function sendVR() {
         const d2 = await res.json(); 
         alert(d2.message); 
         fetchVR();
-        fetchOrders(); // 💡 주문 후 우측 히스토리 패널 자동 갱신
+        fetchAccountInfo();
+        fetchOrders(); // 💡 주문 후 우측 히스토리 패널 및 잔고 자동 갱신
     });
 }
 
@@ -252,7 +318,8 @@ async function sendManual(side, type) {
             alert(data.message || data.detail); 
             fetchIBM(); 
             if(document.getElementById('vr-toggle').checked) fetchVR();
-            fetchOrders(); // 💡 주문 후 우측 히스토리 패널 자동 갱신
+            fetchAccountInfo();
+            fetchOrders(); // 💡 주문 후 우측 히스토리 패널 및 잔고 자동 갱신
         } catch(e) { alert("수동 주문 통신 에러 발생"); }
     });
 }
@@ -286,6 +353,8 @@ function bindAutocompleteEngine(inputId, suggestBoxId, selectCallback) {
 }
 
 window.onload = () => { 
+    initTheme();
+    fetchAccountInfo(); // 💡 초기 구동 시 실시간 구매력 잔고 불러오기
     fetchIBM(); 
     fetchOrders(); // 💡 초기 구동 시 주문 히스토리 불러오기
     bindAutocompleteEngine('ibm-ticker', 'ibm-suggests', fetchIBM);

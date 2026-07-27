@@ -44,6 +44,21 @@ def get_alpaca_clients(account_type: str):
     data = StockHistoricalDataClient(acc["API_KEY"].strip(), acc["SECRET_KEY"].strip())
     return trade, data
 
+@app.get("/api/account/{account_type}")
+def get_account_info(account_type: str):
+    try:
+        trade_client, _ = get_alpaca_clients(account_type)
+        acc = trade_client.get_account()
+        return {
+            "buying_power": float(acc.buying_power),
+            "cash": float(acc.cash),
+            "portfolio_value": float(acc.portfolio_value),
+            "equity": float(acc.equity),
+            "currency": acc.currency
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"계좌 정보 조회 실패: {str(e)}")
+
 @app.get("/api/search")
 def search_tickers(q: str = ""):
     global ALL_ASSETS_CACHE
