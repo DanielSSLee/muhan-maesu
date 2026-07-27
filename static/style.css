@@ -1,0 +1,19 @@
+body {
+    background-color: #030712;
+    color: #f3f4f6;
+}
+
+.card { 
+    background-color: #111827; 
+    border: 1px solid #1f2937; 
+    border-radius: 1.25rem; 
+}
+
+input, select { 
+    background-color: #030712 !important; 
+    border: 1px solid #374151 !important; 
+    color: white !important; 
+}
+
+.ibm-accent { color: #22d3ee; }
+.vr-accent { color: #fbbf24; }

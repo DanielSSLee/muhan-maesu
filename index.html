@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>라오어 전략 통합 터미널</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <link class="eval-css" rel="stylesheet" href="/static/style.css">
+</head>
+<body class="p-4 lg:p-6 h-screen overflow-hidden flex flex-col justify-between">
+    
+    <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-800 pb-2.5 flex-shrink-0">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight">Strategy Dashboard</h1>
+            <p class="text-xs text-zinc-500">라오어 무한매수법 & 밸류 리밸런싱 통합 관리 터미널</p>
+        </div>
+        
+        <div class="flex bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 items-center">
+            <label class="inline-flex items-center cursor-pointer border-r border-zinc-800 pr-4 mr-2 select-none">
+                <input type="checkbox" id="vr-toggle" onchange="toggleVRDisplay()" class="sr-only peer">
+                <div class="relative w-8 h-4 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-zinc-400 peer-checked:after:bg-amber-400 after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-zinc-950 border border-zinc-700"></div>
+                <span class="ms-2 text-xs font-bold text-zinc-400 peer-checked:text-zinc-200">VR 전략 켜기</span>
+            </label>
+            <div id="btn-live" class="px-5 py-1.5 rounded-lg text-xs font-extrabold bg-zinc-950 text-rose-400 border border-rose-950 shadow shadow-rose-950/20 select-none">
+                🔴 LIVE 계정 활성화됨
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full flex-1 flex flex-col lg:flex-row my-3 overflow-hidden gap-5">
+        
+        <div class="flex-1 flex flex-col justify-between overflow-y-auto pr-1">
+            <div id="strategy-grid" class="grid grid-cols-1 lg:grid-cols-1 gap-4 flex-1 overflow-hidden items-stretch">
+                
+                <div class="card p-5 flex flex-col justify-between h-full">
+                    <div class="space-y-3 flex flex-col flex-1 justify-start">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-cyan-500/10 rounded-lg">
+                                    <svg class="w-5 h-5 auto ibm-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                </div>
+                                <h2 class="text-base font-bold ibm-accent">무한매수법 <span class="text-xs text-zinc-500 ml-1">V2.0 CLS</span></h2>
+                            </div>
+                            <button onclick="fetchIBM()" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-cyan-400 transition-colors" title="데이터 수동 동기화">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="relative">
+                                <label class="text-[10px] text-zinc-500 block mb-0.5">티커 실시간 검색</label>
+                                <input type="text" id="ibm-ticker" value="SOXL" autocomplete="off" onkeydown="if(event.key==='Enter') fetchIBM()" class="w-full rounded-lg p-1.5 text-xs uppercase font-bold text-center">
+                                <div id="ibm-suggests" class="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl hidden z-50 max-h-48 overflow-y-auto"></div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5">예산($)</label>
+                                <input type="number" id="ibm-budget" value="10000" class="w-full rounded-lg p-1.5 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5">division(일)</label>
+                                <input type="number" id="ibm-division" value="40" class="w-full rounded-lg p-1.5 text-xs">
+                            </div>
+                        </div>
+
+                        <div class="bg-black/30 rounded-xl p-3 space-y-2 text-xs border border-zinc-800/40">
+                            <div class="flex justify-between"><span class="text-zinc-400">현재가 / 내 평단</span><span id="ibm-price" class="font-bold">$- / $-</span></div>
+                            <div class="flex justify-between"><span class="text-zinc-400">보유량 / 익절가</span><span id="ibm-qty" class="font-bold text-cyan-400">- 주 / $-</span></div>
+                            <div class="flex justify-between border-t border-zinc-800/60 pt-2 italic text-zinc-500">
+                                <span>금일 매수 예정 수량</span><span id="ibm-shares" class="font-medium text-white">- 주</span>
+                            </div>
+                        </div>
+
+                        <div id="ibm-chart-container" class="flex-1 min-h-[140px] rounded-xl overflow-hidden border border-zinc-800/50 bg-zinc-950/40"></div>
+                    </div>
+                    <button onclick="sendIBM()" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 rounded-xl font-bold text-xs shadow-lg shadow-cyan-900/20 transition-all active:scale-95 mt-2">LOC 통합 주문 전송</button>
+                </div>
+
+                <div id="vr-card" class="card p-5 flex flex-col justify-between h-full hidden">
+                    <div class="space-y-3 flex flex-col flex-1 justify-start">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-amber-500/10 rounded-lg">
+                                    <svg class="w-5 h-5 vr-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                                </div>
+                                <h2 class="text-base font-bold vr-accent">밸류 리밸런싱 <span class="text-xs text-zinc-500 ml-1">Value Path</span></h2>
+                            </div>
+                            <button onclick="fetchVR()" class="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-amber-400 transition-colors" title="데이터 수동 동기화">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="relative">
+                                <label class="text-[10px] text-zinc-500 block mb-0.5">티커 실시간 검색</label>
+                                <input type="text" id="vr-ticker" value="TQQQ" autocomplete="off" onkeydown="if(event.key==='Enter') fetchVR()" class="w-full rounded-lg p-1.5 text-xs uppercase font-bold text-center">
+                                <div id="vr-suggests" class="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl hidden z-50 max-h-48 overflow-y-auto"></div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5">현재 목표 밸류($)</label>
+                                <input type="number" id="vr-target" value="20000" class="w-full rounded-lg p-1.5 text-xs">
+                            </div>
+                        </div>
+
+                        <div class="bg-black/30 rounded-xl p-3 space-y-2 text-xs border border-zinc-800/40">
+                            <div class="flex justify-between"><span class="text-zinc-400">현재 자산 가치</span><span id="vr-current-val" class="font-bold">$-</span></div>
+                            <div class="flex justify-between"><span class="text-zinc-400">목표와의 차이 (Gap)</span><span id="vr-gap" class="font-bold text-amber-400">$-</span></div>
+                            <div class="flex justify-between border-t border-zinc-800/60 pt-2 italic text-zinc-500">
+                                <span>수행할 동작</span><span id="vr-action" class="font-bold text-white">-</span>
+                            </div>
+                        </div>
+
+                        <div id="vr-chart-container" class="flex-1 min-h-[140px] rounded-xl overflow-hidden border border-zinc-800/50 bg-zinc-950/40"></div>
+                    </div>
+                    <button onclick="sendVR()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold text-xs shadow-lg shadow-amber-900/20 transition-all active:scale-95 mt-2">리밸런싱 주문 실행</button>
+                </div>
+            </div>
+
+            <div class="card p-4 flex-shrink-0 mt-3.5 space-y-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-rose-500/10 rounded-lg"><svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg></div>
+                    <h2 class="text-sm font-bold text-rose-400">수동 개별 오더 보드 <span class="text-[10px] text-zinc-500 ml-1">실전 계정으로 전송</span></h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="relative">
+                        <label class="text-[10px] text-zinc-500 block mb-0.5">티커 직접 입력 (영어)</label>
+                        <input type="text" id="m-ticker" value="TQQQ" autocomplete="off" class="w-full rounded-lg p-1.5 text-xs uppercase font-semibold">
+                        <div id="m-suggests" class="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl hidden z-50 max-h-48 overflow-y-auto"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-zinc-500 block mb-0.5">수량 (주)</label>
+                        <input type="number" id="m-qty" placeholder="예: 5" class="w-full rounded-lg p-1.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-zinc-500 block mb-0.5">한도 가격 ($)</label>
+                        <input type="number" id="m-price" placeholder="예: 75.50" class="w-full rounded-lg p-1.5 text-xs">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] font-bold">
+                    <button onclick="sendManual('BUY','LOC')" class="py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all active:scale-95">LOC 매수</button>
+                    <button onclick="sendManual('SELL','LOC')" class="py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all active:scale-95">LOC 매도</button>
+                    <button onclick="sendManual('BUY','LIMIT')" class="py-2 bg-amber-950/30 text-amber-400 border border-amber-900/50 hover:bg-amber-900/50 rounded-lg transition-all active:scale-95">지정가 매수</button>
+                    <button onclick="sendManual('SELL','LIMIT')" class="py-2 bg-amber-950/30 text-amber-400 border border-amber-900/50 hover:bg-amber-900/50 rounded-lg transition-all active:scale-95">지정가 매도</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full lg:w-[360px] flex-shrink-0 card p-4 flex flex-col h-[300px] lg:h-full">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3">
+                <h2 class="text-sm font-bold text-zinc-100 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    주문 히스토리
+                </h2>
+                <button onclick="fetchOrders()" class="p-1 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors" title="히스토리 새로고침">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
+                </button>
+            </div>
+            <div id="order-history-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                </div>
+        </div>
+
+    </div>
+
+    <div id="order-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-all duration-200">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl transform scale-95 transition-transform duration-200" id="modal-box">
+            <div class="flex items-center gap-2 border-b border-zinc-800 pb-3">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <h3 id="modal-title" class="text-base font-bold text-zinc-100">주문 승인 명세서</h3>
+            </div>
+            <div class="my-4 max-h-64 overflow-y-auto pr-1">
+                <ul id="modal-details" class="space-y-2.5 text-xs text-zinc-300"></ul>
+            </div>
+            <div class="text-[11px] text-zinc-400 bg-zinc-950/60 p-3 rounded-xl border border-zinc-800/40 leading-relaxed">
+                ⚠️ <span class="text-amber-400 font-semibold">최종 승인 경고:</span> 실전 계좌 주문입니다. 전송 시 자산이 즉시 체결 엔진으로 전달됩니다.
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-1">
+                <button onclick="closeOrderModal()" class="py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs font-bold text-zinc-400 transition-colors">주문 취소</button>
+                <button id="modal-confirm-btn" class="py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 rounded-xl text-xs font-bold text-white shadow-lg shadow-orange-950/20 transition-all">최종 주문 승인</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center text-[10px] text-zinc-600 flex-shrink-0 border-t border-zinc-950 pt-1">
+        © 2026 Muhan Quant Terminal Systems.
+    </div>
+
+    <script src="/static/script.js?v=1.0.2"></script>
+</body>
+</html>
