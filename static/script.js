@@ -3,12 +3,22 @@ let vrData = null;
 let pendingOrderCallback = null; 
 let curLang = localStorage.getItem('lang') || 'ko';
 
+function getAuthHeaders() {
+    const apiKey = localStorage.getItem('alpaca_api_key') || '';
+    const secretKey = localStorage.getItem('alpaca_secret_key') || '';
+    return {
+        'X-Alpaca-API-Key': apiKey,
+        'X-Alpaca-Secret-Key': secretKey
+    };
+}
+
 const translations = {
     ko: {
         subtitle: "라오어 무한매수법 & 밸류 리밸런싱 통합 관리 터미널",
         vrToggle: "VR 전략 켜기",
         liveAccount: "🔴 LIVE 계정",
         buyingPowerLabel: "구매력:",
+        keySettingsBtn: "🔑 API Key 설정",
         themeDark: "다크",
         themeLight: "라이트",
         ibmTitle: "무한매수법",
@@ -39,13 +49,14 @@ const translations = {
         modalWarning: "⚠️ 실전 계좌 경고: 전송 시 자산이 즉시 체결 엔진으로 전달됩니다.",
         modalCancel: "주문 취소",
         modalConfirm: "최종 주문 승인",
-        envModalTitle: "Alpaca 계정 연동 필요",
-        envModalSub: ".env 파일 및 API Key 설정이 필요합니다.",
-        envModalBanner: "⚠️ 계정 연동 필요: 주문을 생성하거나 집행하려면 Alpaca 계정의 API Key와 Secret Key를 연동해야 합니다.",
-        envFormTitle: "🔑 API Key 직접 입력 및 자동 저장",
+        envModalTitle: "Alpaca 계정 연동 설정",
+        envModalSub: "개인 브라우저(localStorage)에 안전하게 저장됩니다.",
+        envModalBanner: "🔒 보안 안내: 입력한 API Key는 본인의 웹 브라우저(localStorage)에만 저장되며 암호화된 요청 헤더로 전송됩니다.",
+        envFormTitle: "🔑 API Key 브라우저 저장",
         apiKeyLabel: "LIVE API Key ID",
         secretKeyLabel: "LIVE Secret Key",
         envSaveBtn: "🔑 Key 저장 및 연동하기",
+        envClearBtn: "🗑️ 연동 해제 (삭제)",
         envDocsLink: "Alpaca API Key & Secret Key 발급 가이드 (공식 문서) ↗",
         envCloseBtn: "확인 (닫기)",
         noHistory: "최근 주문 내역이 없습니다.",
@@ -56,6 +67,7 @@ const translations = {
         vrToggle: "Turn on VR Strategy",
         liveAccount: "🔴 LIVE Account",
         buyingPowerLabel: "Buying Power:",
+        keySettingsBtn: "🔑 Key Settings",
         themeDark: "Dark",
         themeLight: "Light",
         ibmTitle: "Infinite Buy",
@@ -86,13 +98,14 @@ const translations = {
         modalWarning: "⚠️ Real Account Warning: Orders will be submitted immediately to the execution engine.",
         modalCancel: "Cancel Order",
         modalConfirm: "Confirm Final Order",
-        envModalTitle: "Alpaca Account Connection Required",
-        envModalSub: ".env file & API Key setup required.",
-        envModalBanner: "⚠️ Account Connection Required: You must connect your Alpaca API Key and Secret Key to place orders.",
-        envFormTitle: "🔑 Enter & Auto-Save API Keys",
+        envModalTitle: "Alpaca Account Setup",
+        envModalSub: "Stored securely in your browser (localStorage).",
+        envModalBanner: "🔒 Security Info: API keys are saved strictly in your browser's localStorage and passed via HTTPS headers.",
+        envFormTitle: "🔑 Store API Keys in Browser",
         apiKeyLabel: "LIVE API Key ID",
         secretKeyLabel: "LIVE Secret Key",
         envSaveBtn: "🔑 Save & Connect Keys",
+        envClearBtn: "🗑️ Disconnect Keys",
         envDocsLink: "Alpaca API Key & Secret Key Setup Guide (Official Docs) ↗",
         envCloseBtn: "Close",
         noHistory: "No recent order history.",
@@ -140,7 +153,7 @@ function initLanguage() {
     applyLanguage(savedLang);
 }
 
-async function saveEnvKeys() {
+function saveEnvKeys() {
     const apiKey = document.getElementById('env-api-key').value.trim();
     const secretKey = document.getElementById('env-secret-key').value.trim();
 
@@ -149,26 +162,29 @@ async function saveEnvKeys() {
         return;
     }
 
-    try {
-        const res = await fetch('/api/save-env', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api_key: apiKey, secret_key: secretKey })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            alert(data.detail || "Error saving credentials");
-            return;
-        }
-        alert(curLang === 'en' ? "Alpaca account successfully connected!" : "Alpaca 계정이 성공적으로 연동되었습니다!");
-        closeEnvModal();
-        fetchAccountInfo();
-        fetchIBM();
-        if (document.getElementById('vr-toggle').checked) fetchVR();
-        fetchOrders();
-    } catch(e) {
-        alert(curLang === 'en' ? "Failed to communicate with server." : "서버 통신 실패");
-    }
+    localStorage.setItem('alpaca_api_key', apiKey);
+    localStorage.setItem('alpaca_secret_key', secretKey);
+    alert(curLang === 'en' ? "Alpaca API keys saved safely in your browser!" : "Alpaca API Key가 브라우저에 성공적으로 저장되었습니다!");
+    closeEnvModal();
+    fetchAccountInfo();
+    fetchIBM();
+    if (document.getElementById('vr-toggle').checked) fetchVR();
+    fetchOrders();
+}
+
+function clearEnvKeys() {
+    localStorage.removeItem('alpaca_api_key');
+    localStorage.removeItem('alpaca_secret_key');
+    const apiKeyInput = document.getElementById('env-api-key');
+    const secretKeyInput = document.getElementById('env-secret-key');
+    if (apiKeyInput) apiKeyInput.value = '';
+    if (secretKeyInput) secretKeyInput.value = '';
+    const bpVal = document.getElementById('buying-power-val');
+    if (bpVal) bpVal.innerText = '$-';
+    alert(curLang === 'en' ? "Alpaca API keys cleared from browser." : "저장된 Alpaca API Key가 연동 해제되었습니다.");
+    closeEnvModal();
+    fetchAccountInfo();
+    fetchOrders();
 }
 
 function toggleVRDisplay() {
@@ -277,26 +293,14 @@ function closeOrderModal() {
     pendingOrderCallback = null;
 }
 
-function openEnvModal(hasEnv = false) {
+function openEnvModal() {
     const modal = document.getElementById('env-modal');
     const box = document.getElementById('env-modal-box');
-    const desc = document.getElementById('env-modal-desc');
+    const apiKeyInput = document.getElementById('env-api-key');
+    const secretKeyInput = document.getElementById('env-secret-key');
 
-    if (desc) {
-        if (curLang === 'en') {
-            if (!hasEnv) {
-                desc.innerHTML = `No <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> file found in project root directory.<br>Please create a <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> file with your API credentials as shown below:`;
-            } else {
-                desc.innerHTML = `Valid Alpaca API Key or Secret Key not found in <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> file.<br>Please set your keys as shown below:`;
-            }
-        } else {
-            if (!hasEnv) {
-                desc.innerHTML = `프로젝트 루트 디렉토리에 <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> 파일이 존재하지 않습니다.<br>아래와 같이 <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> 파일을 생성하고 API Key 및 Secret Key를 입력해 주세요:`;
-            } else {
-                desc.innerHTML = `<code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> 파일에 유효한 Alpaca API Key 또는 Secret Key가 설정되지 않았습니다.<br>아래와 같이 키를 설정해 주세요:`;
-            }
-        }
-    }
+    if (apiKeyInput) apiKeyInput.value = localStorage.getItem('alpaca_api_key') || '';
+    if (secretKeyInput) secretKeyInput.value = localStorage.getItem('alpaca_secret_key') || '';
 
     modal.classList.remove('hidden');
     setTimeout(() => {
@@ -314,19 +318,21 @@ function closeEnvModal() {
 }
 
 async function checkEnvBeforeOrder() {
+    const apiKey = localStorage.getItem('alpaca_api_key');
+    const secretKey = localStorage.getItem('alpaca_secret_key');
+    if (apiKey && secretKey) return true;
+
     try {
-        const res = await fetch('/api/check-env');
+        const res = await fetch('/api/check-env', { headers: getAuthHeaders() });
         if (res.ok) {
             const status = await res.json();
-            if (!status.has_env || !status.has_keys) {
-                openEnvModal(status.has_env);
-                return false;
-            }
+            if (status.has_keys) return true;
         }
     } catch(e) {
         console.error("환경 변수 상태 확인 실패:", e);
     }
-    return true;
+    openEnvModal();
+    return false;
 }
 
 function toggleOrderDetail(orderId) {
@@ -340,7 +346,7 @@ function toggleOrderDetail(orderId) {
 
 async function fetchAccountInfo() {
     try {
-        const res = await fetch(`/api/account/${curAcc}`);
+        const res = await fetch(`/api/account/${curAcc}`, { headers: getAuthHeaders() });
         if (res.ok) {
             const data = await res.json();
             const formattedBP = Number(data.buying_power).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -354,7 +360,7 @@ async function fetchAccountInfo() {
 
 async function fetchOrders() {
     try {
-        const res = await fetch(`/api/orders/${curAcc}`);
+        const res = await fetch(`/api/orders/${curAcc}`, { headers: getAuthHeaders() });
         const data = await res.json();
         const container = document.getElementById('order-history-list');
         container.innerHTML = '';
@@ -429,7 +435,7 @@ async function fetchIBM() {
     
     refreshChartWidget('ibm-chart-container', t);
     try {
-        const res = await fetch(`/api/status/ibm/${curAcc}/${t}/${b}/${d}`);
+        const res = await fetch(`/api/status/ibm/${curAcc}/${t}/${b}/${d}`, { headers: getAuthHeaders() });
         const data = await res.json();
         if(res.ok) {
             const unit = curLang === 'en' ? 'shares' : '주';
@@ -448,7 +454,7 @@ async function fetchVR() {
     
     refreshChartWidget('vr-chart-container', t);
     try {
-        const res = await fetch(`/api/status/vr/${curAcc}/${t}/${target}`);
+        const res = await fetch(`/api/status/vr/${curAcc}/${t}/${target}`, { headers: getAuthHeaders() });
         vrData = await res.json();
         if(res.ok) {
             const unit = curLang === 'en' ? 'shares' : '주';
@@ -503,13 +509,14 @@ async function sendIBM() {
     openOrderModal(modalTitle, detailsHtml, async () => {
         try {
             const res = await fetch('/api/order/auto', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({account_type:curAcc, ticker:t, budget:b, division:d})
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({ account_type: curAcc, ticker: t, budget: b, division: d })
             });
             const d2 = await res.json();
             if (!res.ok) {
                 if (d2.detail && (d2.detail.error === 'MISSING_ENV' || (typeof d2.detail === 'string' && d2.detail.includes('.env')))) {
-                    openEnvModal(false);
+                    openEnvModal();
                     return;
                 }
                 alert(typeof d2.detail === 'string' ? d2.detail : (d2.detail?.message || "주문 실패"));
@@ -555,13 +562,14 @@ async function sendVR() {
     openOrderModal(modalTitle, detailsHtml, async () => {
         try {
             const res = await fetch('/api/order/vr', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({account_type:curAcc, ticker:t, qty:vrData.required_qty, action:vrData.action})
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({ account_type: curAcc, ticker: t, qty: vrData.required_qty, action: vrData.action })
             });
             const d2 = await res.json();
             if (!res.ok) {
                 if (d2.detail && (d2.detail.error === 'MISSING_ENV' || (typeof d2.detail === 'string' && d2.detail.includes('.env')))) {
-                    openEnvModal(false);
+                    openEnvModal();
                     return;
                 }
                 alert(typeof d2.detail === 'string' ? d2.detail : (d2.detail?.message || "주문 실패"));
@@ -620,13 +628,14 @@ async function sendManual(side, type) {
     openOrderModal(modalTitle, detailsHtml, async () => {
         try {
             const res = await fetch('/api/order/manual', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                 body: JSON.stringify({ account_type: curAcc, ticker, qty, price, side, type })
             });
             const data = await res.json(); 
             if (!res.ok) {
                 if (data.detail && (data.detail.error === 'MISSING_ENV' || (typeof data.detail === 'string' && data.detail.includes('.env')))) {
-                    openEnvModal(false);
+                    openEnvModal();
                     return;
                 }
                 alert(typeof data.detail === 'string' ? data.detail : (data.detail?.message || "수동 주문 실패"));
@@ -650,7 +659,7 @@ function bindAutocompleteEngine(inputId, suggestBoxId, selectCallback) {
         const word = input.value.trim().toUpperCase();
         if (!word) { box.classList.add('hidden'); return; }
         try {
-            const response = await fetch(`/api/search?q=${word}`);
+            const response = await fetch(`/api/search?q=${word}`, { headers: getAuthHeaders() });
             const list = await response.json();
             if (list.length === 0) { box.classList.add('hidden'); return; }
             box.innerHTML = '';
@@ -686,4 +695,4 @@ window.onload = () => {
         if (pendingOrderCallback) pendingOrderCallback();
         closeOrderModal();
     };
-};
+};

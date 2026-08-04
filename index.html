@@ -38,6 +38,10 @@
                 <span class="text-zinc-500 font-sans" data-i18n="buyingPowerLabel">구매력:</span>
                 <span id="buying-power-val" class="font-mono font-bold">$-</span>
             </div>
+            <button id="key-settings-btn" onclick="openEnvModal()" class="px-2.5 py-1 rounded-md border border-amber-900/60 bg-zinc-950 hover:bg-zinc-800 text-amber-400 hover:text-amber-300 transition-all select-none flex items-center gap-1.5 text-xs font-semibold" title="API Key 설정">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                <span id="key-settings-text" data-i18n="keySettingsBtn">🔑 API Key 설정</span>
+            </button>
             <button id="lang-toggle" onclick="toggleLanguage()" class="px-2.5 py-1 rounded-md border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-all select-none flex items-center gap-1.5 text-xs font-semibold" title="언어 전환 / Switch Language">
                 <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
                 <span id="lang-toggle-text">English</span>
@@ -202,7 +206,7 @@
         </div>
     </div>
 
-    <!-- 🔑 .env 파일 미존재 및 Alpaca API Key 미설정 알림 모달 -->
+    <!-- 🔑 Client-Side Alpaca API Key Modal -->
     <div id="env-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden opacity-0 transition-all duration-150 p-4">
         <div class="bg-zinc-900 border border-amber-500/40 rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl transform scale-95 transition-transform duration-150" id="env-modal-box">
             <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
@@ -213,8 +217,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-sm font-bold text-zinc-100" data-i18n="envModalTitle">Alpaca 계정 연동 필요</h3>
-                        <p class="text-[11px] text-zinc-400" data-i18n="envModalSub">.env 파일 및 API Key 설정이 필요합니다.</p>
+                        <h3 class="text-sm font-bold text-zinc-100" data-i18n="envModalTitle">Alpaca 계정 연동 설정</h3>
+                        <p class="text-[11px] text-zinc-400" data-i18n="envModalSub">개인 브라우저(localStorage)에 안전하게 저장됩니다.</p>
                     </div>
                 </div>
                 <button onclick="closeEnvModal()" class="text-zinc-500 hover:text-zinc-300 p-1 rounded-md">
@@ -223,12 +227,12 @@
             </div>
 
             <div class="space-y-3 text-xs text-zinc-300">
-                <div class="bg-amber-950/40 border border-amber-900/60 p-3 rounded-lg text-amber-200 leading-relaxed" data-i18n="envModalBanner">
-                    ⚠️ <strong>계정 연동 필요:</strong> 주문을 생성하거나 집행하려면 Alpaca 계정의 <strong>API Key</strong>와 <strong>Secret Key</strong>를 연동해야 합니다.
+                <div class="bg-emerald-950/40 border border-emerald-900/60 p-3 rounded-lg text-emerald-200 leading-relaxed text-[11px]" data-i18n="envModalBanner">
+                    🔒 <strong>보안 안내:</strong> 입력한 API Key는 본인의 웹 브라우저(`localStorage`)에만 저장되며, 암호화된 요청 헤더로 전송됩니다. 서버 디스크에 디폴트로 보관되지 않아 안심하고 사용할 수 있습니다.
                 </div>
 
                 <div class="space-y-2 bg-zinc-950 p-3 rounded-lg border border-zinc-800">
-                    <div class="text-[11px] font-semibold text-zinc-200" data-i18n="envFormTitle">🔑 API Key 직접 입력 및 자동 저장</div>
+                    <div class="text-[11px] font-semibold text-zinc-200" data-i18n="envFormTitle">🔑 API Key 브라우저 저장</div>
                     <div>
                         <label class="text-[10px] text-zinc-400 block mb-0.5" data-i18n="apiKeyLabel">LIVE API Key ID</label>
                         <input type="text" id="env-api-key" placeholder="AKC2..." autocomplete="off" class="w-full rounded-md p-1.5 text-xs font-mono border-zinc-800">
@@ -237,9 +241,14 @@
                         <label class="text-[10px] text-zinc-400 block mb-0.5" data-i18n="secretKeyLabel">LIVE Secret Key</label>
                         <input type="password" id="env-secret-key" placeholder="Secret Key" autocomplete="off" class="w-full rounded-md p-1.5 text-xs font-mono border-zinc-800">
                     </div>
-                    <button onclick="saveEnvKeys()" class="w-full py-2 mt-1 bg-emerald-600 hover:bg-emerald-500 rounded-md font-bold text-xs text-white transition-all shadow-md active:scale-[0.99]" data-i18n="envSaveBtn">
-                        🔑 Key 저장 및 연동하기
-                    </button>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="clearEnvKeys()" class="py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md font-bold text-xs text-rose-400 transition-all active:scale-[0.99]" data-i18n="envClearBtn">
+                            🗑️ 연동 해제 (삭제)
+                        </button>
+                        <button onclick="saveEnvKeys()" class="py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md font-bold text-xs text-white transition-all shadow-md active:scale-[0.99]" data-i18n="envSaveBtn">
+                            🔑 Key 저장 및 연동하기
+                        </button>
+                    </div>
                 </div>
 
                 <div class="pt-0.5">

@@ -1,7 +1,7 @@
 import os
 import math
 import traceback
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -17,7 +17,6 @@ import yfinance as yf
 from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# 💡 secret.env 파일명 지정 (기존 설정 유지)
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 app = FastAPI(title="Laoer Strategy Live Terminal")
@@ -28,89 +27,60 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 ACCOUNTS = {
     "live": {
         "name": "실전 거래 계정 (REAL)",
-        "API_KEY": os.getenv("LIVE_API_KEY", ""),
-        "SECRET_KEY": os.getenv("LIVE_SECRET_KEY", ""),
         "is_live": True
     }
 }
 
 ALL_ASSETS_CACHE = []
 
-def get_env_status():
-    env_path = os.path.join(BASE_DIR, ".env")
-    has_env = os.path.exists(env_path)
-    if has_env:
-        load_dotenv(env_path, override=True)
-        if "live" in ACCOUNTS:
-            ACCOUNTS["live"]["API_KEY"] = os.getenv("LIVE_API_KEY", "")
-            ACCOUNTS["live"]["SECRET_KEY"] = os.getenv("LIVE_SECRET_KEY", "")
-    api_key = os.getenv("LIVE_API_KEY", "").strip() if has_env else ""
-    secret_key = os.getenv("LIVE_SECRET_KEY", "").strip() if has_env else ""
-    has_keys = bool(api_key and secret_key)
-    return {
-        "has_env": has_env,
-        "has_keys": has_keys,
-        "valid": has_env and has_keys
-    }
+def get_alpaca_clients(request: Request, account_type: str = "live"):
+    if account_type not in ACCOUNTS:
+        raise HTTPException(status_code=400, detail="유효하지 않은 계좌 타입입니다.")
+    
+    # 1. Read API credentials directly from HTTP Request Headers (Client-side localStorage flow)
+    api_key = request.headers.get("X-Alpaca-API-Key", "").strip()
+    secret_key = request.headers.get("X-Alpaca-Secret-Key", "").strip()
+
+    # 2. Fall back to server environment variables if request headers are missing
+    if not api_key or not secret_key:
+        api_key = os.getenv("LIVE_API_KEY", "").strip()
+        secret_key = os.getenv("LIVE_SECRET_KEY", "").strip()
+
+    if not api_key or not secret_key:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "MISSING_ENV",
+                "message": "Alpaca API Key 또는 Secret Key가 설정되지 않았습니다. 브라우저에서 🔑 Key 설정 버튼을 눌러 연동해 주세요.",
+                "docs_url": "https://alpaca.markets/docs/trading/getting-started/"
+            }
+        )
+
+    is_live = ACCOUNTS[account_type]["is_live"]
+    trade = TradingClient(api_key, secret_key, paper=not is_live)
+    data = StockHistoricalDataClient(api_key, secret_key)
+    return trade, data
 
 @app.get("/api/check-env")
-def check_env_endpoint():
-    return get_env_status()
+def check_env_endpoint(request: Request):
+    api_key = request.headers.get("X-Alpaca-API-Key", "").strip() or os.getenv("LIVE_API_KEY", "").strip()
+    secret_key = request.headers.get("X-Alpaca-Secret-Key", "").strip() or os.getenv("LIVE_SECRET_KEY", "").strip()
+    has_keys = bool(api_key and secret_key)
+    return {
+        "has_env": True,
+        "has_keys": has_keys,
+        "valid": has_keys
+    }
 
 @app.post("/api/save-env")
 def save_env(data: dict):
-    api_key = data.get("api_key", "").strip()
-    secret_key = data.get("secret_key", "").strip()
-    if not api_key or not secret_key:
-        raise HTTPException(status_code=400, detail="API Key와 Secret Key를 모두 입력해야 합니다.")
-    
-    env_path = os.path.join(BASE_DIR, ".env")
-    env_content = f"# Alpaca Live Account Credentials\nLIVE_API_KEY={api_key}\nLIVE_SECRET_KEY={secret_key}\n"
-    
-    try:
-        with open(env_path, "w", encoding="utf-8") as f:
-            f.write(env_content)
-        
-        load_dotenv(env_path, override=True)
-        if "live" in ACCOUNTS:
-            ACCOUNTS["live"]["API_KEY"] = api_key
-            ACCOUNTS["live"]["SECRET_KEY"] = secret_key
-            
-        return {"status": "success", "message": "API Key가 성공적으로 .env 파일에 저장 및 연동되었습니다."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f".env 저장 실패: {str(e)}")
-
-def get_alpaca_clients(account_type: str):
-    if account_type not in ACCOUNTS:
-        raise HTTPException(status_code=400, detail="유효하지 않은 계좌 타입입니다.")
-    env_status = get_env_status()
-    if not env_status["has_env"]:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "MISSING_ENV",
-                "message": "Alpaca 계좌 연동을 위한 .env 파일이 없습니다. API Key와 Secret Key를 연결해 주세요.",
-                "docs_url": "https://alpaca.markets/docs/trading/getting-started/"
-            }
-        )
-    acc = ACCOUNTS[account_type]
-    if not acc["API_KEY"].strip() or not acc["SECRET_KEY"].strip():
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "MISSING_ENV",
-                "message": "Alpaca API Key 또는 Secret Key가 .env 파일에 설정되지 않았습니다.",
-                "docs_url": "https://alpaca.markets/docs/trading/getting-started/"
-            }
-        )
-    trade = TradingClient(acc["API_KEY"].strip(), acc["SECRET_KEY"].strip(), paper=not acc["is_live"])
-    data = StockHistoricalDataClient(acc["API_KEY"].strip(), acc["SECRET_KEY"].strip())
-    return trade, data
+    # Acknowledge client-side saving without mutating server disk
+    return {"status": "success", "message": "API Key가 브라우저(localStorage)에 저장되었습니다."}
 
 @app.get("/api/account/{account_type}")
-def get_account_info(account_type: str):
+def get_account_info(account_type: str, request: Request):
     try:
-        trade_client, _ = get_alpaca_clients(account_type)
+        trade_client, _ = get_alpaca_clients(request, account_type)
         acc = trade_client.get_account()
         return {
             "buying_power": float(acc.buying_power),
@@ -125,13 +95,13 @@ def get_account_info(account_type: str):
         raise HTTPException(status_code=500, detail=f"계좌 정보 조회 실패: {str(e)}")
 
 @app.get("/api/search")
-def search_tickers(q: str = ""):
+def search_tickers(request: Request, q: str = ""):
     global ALL_ASSETS_CACHE
     q = q.strip().upper()
     if not q: return []
     if not ALL_ASSETS_CACHE:
         try:
-            trade_client, _ = get_alpaca_clients("live")
+            trade_client, _ = get_alpaca_clients(request, "live")
             req = GetAssetsRequest(asset_class=AssetClass.US_EQUITY, status=AssetStatus.ACTIVE)
             assets = trade_client.get_assets(req)
             ALL_ASSETS_CACHE = [{"symbol": a.symbol, "name": a.name} for a in assets if a.tradable]
@@ -147,9 +117,9 @@ def search_tickers(q: str = ""):
     return matches[:10]
 
 @app.get("/api/status/ibm/{account_type}/{ticker}/{budget}/{division}")
-def get_ibm_status(account_type: str, ticker: str, budget: float, division: int):
+def get_ibm_status(account_type: str, ticker: str, budget: float, division: int, request: Request):
     try:
-        trade_client, data_client = get_alpaca_clients(account_type)
+        trade_client, data_client = get_alpaca_clients(request, account_type)
         try:
             yf_ticker = yf.Ticker(ticker)
             current_price = yf_ticker.fast_info['last_price']
@@ -185,15 +155,15 @@ def get_ibm_status(account_type: str, ticker: str, budget: float, division: int)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/order/auto")
-def send_auto_orders(data: dict):
+def send_auto_orders(data: dict, request: Request):
     try:
         account_type = data.get("account_type")
         ticker = data.get("ticker")
         budget = float(data.get("budget"))
         division = int(data.get("division", 40))
         
-        trade_client, _ = get_alpaca_clients(account_type)
-        status = get_ibm_status(account_type, ticker, budget, division)
+        trade_client, _ = get_alpaca_clients(request, account_type)
+        status = get_ibm_status(account_type, ticker, budget, division, request)
         
         buy_qty = status["shares_per_half"]
         current_price = status["current_price"]
@@ -254,9 +224,9 @@ def send_auto_orders(data: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/status/vr/{account_type}/{ticker}/{target_value}")
-def get_vr_status(account_type: str, ticker: str, target_value: float):
+def get_vr_status(account_type: str, ticker: str, target_value: float, request: Request):
     try:
-        trade_client, data_client = get_alpaca_clients(account_type)
+        trade_client, data_client = get_alpaca_clients(request, account_type)
         try:
             yf_ticker = yf.Ticker(ticker)
             current_price = yf_ticker.fast_info['last_price']
@@ -293,9 +263,9 @@ def get_vr_status(account_type: str, ticker: str, target_value: float):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/order/vr")
-def send_vr_order(data: dict):
+def send_vr_order(data: dict, request: Request):
     try:
-        trade_client, _ = get_alpaca_clients(data['account_type'])
+        trade_client, _ = get_alpaca_clients(request, data['account_type'])
         ticker = data['ticker']
         qty = float(data['qty'])
         side = OrderSide.BUY if data['action'] == "BUY" else OrderSide.SELL
@@ -310,7 +280,7 @@ def send_vr_order(data: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/order/manual")
-def send_manual_order(data: dict):
+def send_manual_order(data: dict, request: Request):
     try:
         account_type = data.get("account_type")
         ticker = data.get("ticker")
@@ -319,7 +289,7 @@ def send_manual_order(data: dict):
         side = OrderSide.BUY if data.get("side") == "BUY" else OrderSide.SELL
         tif = TimeInForce.CLS if data.get("type") == "LOC" else TimeInForce.GTC
 
-        trade_client, _ = get_alpaca_clients(account_type)
+        trade_client, _ = get_alpaca_clients(request, account_type)
         manual_order = LimitOrderRequest(symbol=ticker, qty=qty, limit_price=price, side=side, time_in_force=tif)
         trade_client.submit_order(manual_order)
         return {"status": "success", "message": f"[{account_type.upper()}] {ticker} {qty}주 수동 주문 완료!"}
@@ -329,14 +299,10 @@ def send_manual_order(data: dict):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-# =================================================================
-# 💡 [신규 추가] 주문 히스토리 불러오기 API
-# =================================================================
 @app.get("/api/orders/{account_type}")
-def get_order_history(account_type: str):
+def get_order_history(account_type: str, request: Request):
     try:
-        trade_client, _ = get_alpaca_clients(account_type)
-        # 최신 주문 40건을 가져옵니다 (취소/체결/대기 모두 포함)
+        trade_client, _ = get_alpaca_clients(request, account_type)
         req = GetOrdersRequest(status=QueryOrderStatus.ALL, limit=40, direction=Sort.DESC)
         orders = trade_client.get_orders(req)
         
@@ -365,4 +331,4 @@ def index():
     return FileResponse(INDEX_HTML_PATH)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
