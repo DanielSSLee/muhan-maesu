@@ -326,9 +326,10 @@ def get_order_history(account_type: str, request: Request):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/", response_class=FileResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=FileResponse)
 def index():
     return FileResponse(INDEX_HTML_PATH)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+
