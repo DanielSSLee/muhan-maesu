@@ -36,10 +36,73 @@ ACCOUNTS = {
 
 ALL_ASSETS_CACHE = []
 
+def get_env_status():
+    env_path = os.path.join(BASE_DIR, ".env")
+    has_env = os.path.exists(env_path)
+    if has_env:
+        load_dotenv(env_path, override=True)
+        if "live" in ACCOUNTS:
+            ACCOUNTS["live"]["API_KEY"] = os.getenv("LIVE_API_KEY", "")
+            ACCOUNTS["live"]["SECRET_KEY"] = os.getenv("LIVE_SECRET_KEY", "")
+    api_key = os.getenv("LIVE_API_KEY", "").strip() if has_env else ""
+    secret_key = os.getenv("LIVE_SECRET_KEY", "").strip() if has_env else ""
+    has_keys = bool(api_key and secret_key)
+    return {
+        "has_env": has_env,
+        "has_keys": has_keys,
+        "valid": has_env and has_keys
+    }
+
+@app.get("/api/check-env")
+def check_env_endpoint():
+    return get_env_status()
+
+@app.post("/api/save-env")
+def save_env(data: dict):
+    api_key = data.get("api_key", "").strip()
+    secret_key = data.get("secret_key", "").strip()
+    if not api_key or not secret_key:
+        raise HTTPException(status_code=400, detail="API Key와 Secret Key를 모두 입력해야 합니다.")
+    
+    env_path = os.path.join(BASE_DIR, ".env")
+    env_content = f"# Alpaca Live Account Credentials\nLIVE_API_KEY={api_key}\nLIVE_SECRET_KEY={secret_key}\n"
+    
+    try:
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.write(env_content)
+        
+        load_dotenv(env_path, override=True)
+        if "live" in ACCOUNTS:
+            ACCOUNTS["live"]["API_KEY"] = api_key
+            ACCOUNTS["live"]["SECRET_KEY"] = secret_key
+            
+        return {"status": "success", "message": "API Key가 성공적으로 .env 파일에 저장 및 연동되었습니다."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f".env 저장 실패: {str(e)}")
+
 def get_alpaca_clients(account_type: str):
     if account_type not in ACCOUNTS:
         raise HTTPException(status_code=400, detail="유효하지 않은 계좌 타입입니다.")
+    env_status = get_env_status()
+    if not env_status["has_env"]:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "MISSING_ENV",
+                "message": "Alpaca 계좌 연동을 위한 .env 파일이 없습니다. API Key와 Secret Key를 연결해 주세요.",
+                "docs_url": "https://alpaca.markets/docs/trading/getting-started/"
+            }
+        )
     acc = ACCOUNTS[account_type]
+    if not acc["API_KEY"].strip() or not acc["SECRET_KEY"].strip():
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "MISSING_ENV",
+                "message": "Alpaca API Key 또는 Secret Key가 .env 파일에 설정되지 않았습니다.",
+                "docs_url": "https://alpaca.markets/docs/trading/getting-started/"
+            }
+        )
     trade = TradingClient(acc["API_KEY"].strip(), acc["SECRET_KEY"].strip(), paper=not acc["is_live"])
     data = StockHistoricalDataClient(acc["API_KEY"].strip(), acc["SECRET_KEY"].strip())
     return trade, data
@@ -56,6 +119,8 @@ def get_account_info(account_type: str):
             "equity": float(acc.equity),
             "currency": acc.currency
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"계좌 정보 조회 실패: {str(e)}")
 
@@ -182,6 +247,8 @@ def send_auto_orders(data: dict):
             msg = f"매수 2건 및 전략 분할 매도 배치 완료! ({' / '.join(orders_desc)})"
 
         return {"status": "success", "message": msg}
+    except HTTPException:
+        raise
     except Exception as e: 
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -219,6 +286,8 @@ def get_vr_status(account_type: str, ticker: str, target_value: float):
             "required_qty": required_qty,
             "action": "BUY" if gap > 0 else "SELL"
         }
+    except HTTPException:
+        raise
     except Exception as e: 
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -234,6 +303,8 @@ def send_vr_order(data: dict):
         order = MarketOrderRequest(symbol=ticker, qty=qty, side=side, time_in_force=TimeInForce.DAY)
         trade_client.submit_order(order)
         return {"message": f"VR {data['action']} {qty}주 주문 성공"}
+    except HTTPException:
+        raise
     except Exception as e: 
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -252,6 +323,8 @@ def send_manual_order(data: dict):
         manual_order = LimitOrderRequest(symbol=ticker, qty=qty, limit_price=price, side=side, time_in_force=tif)
         trade_client.submit_order(manual_order)
         return {"status": "success", "message": f"[{account_type.upper()}] {ticker} {qty}주 수동 주문 완료!"}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -281,6 +354,8 @@ def get_order_history(account_type: str):
                 "submitted_at": o.submitted_at.strftime("%m-%d %H:%M") if o.submitted_at else ""
             })
         return history
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

@@ -120,14 +120,16 @@ html.light-mode .bg-amber-950\/30:hover {
 }
 
 /* Modal in Light Mode */
-html.light-mode #modal-box {
+html.light-mode #modal-box,
+html.light-mode #env-modal-box {
     background-color: #ffffff;
     border-color: #e2e8f0;
     border-radius: 0.5rem;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-html.light-mode #order-modal {
+html.light-mode #order-modal,
+html.light-mode #env-modal {
     background-color: rgba(15, 23, 42, 0.5);
 }
 

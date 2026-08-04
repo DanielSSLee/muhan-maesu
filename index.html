@@ -22,26 +22,30 @@
     <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-800 pb-2.5 flex-shrink-0">
         <div>
             <h1 class="text-xl font-bold tracking-tight">Strategy Dashboard</h1>
-            <p class="text-xs text-zinc-500">라오어 무한매수법 & 밸류 리밸런싱 통합 관리 터미널</p>
+            <p class="text-xs text-zinc-500" data-i18n="subtitle">라오어 무한매수법 & 밸류 리밸런싱 통합 관리 터미널</p>
         </div>
         
         <div class="flex bg-zinc-900 p-1 rounded-md border border-zinc-800 items-center gap-2">
             <label class="inline-flex items-center cursor-pointer border-r border-zinc-800 pr-3 select-none">
                 <input type="checkbox" id="vr-toggle" onchange="toggleVRDisplay()" class="sr-only peer">
                 <div class="relative w-7 h-3.5 bg-zinc-800 rounded-sm peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-zinc-400 peer-checked:after:bg-amber-400 after:rounded-sm after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-zinc-950 border border-zinc-700"></div>
-                <span class="ms-2 text-xs font-semibold text-zinc-400 peer-checked:text-zinc-200">VR 전략 켜기</span>
+                <span class="ms-2 text-xs font-semibold text-zinc-400 peer-checked:text-zinc-200" data-i18n="vrToggle">VR 전략 켜기</span>
             </label>
-            <div id="btn-live" class="px-3 py-1 rounded-md text-xs font-bold bg-zinc-950 text-rose-400 border border-rose-900/60 select-none">
+            <div id="btn-live" class="px-3 py-1 rounded-md text-xs font-bold bg-zinc-950 text-rose-400 border border-rose-900/60 select-none" data-i18n="liveAccount">
                 🔴 LIVE 계정
             </div>
             <div id="buying-power-badge" onclick="fetchAccountInfo()" class="px-3 py-1 rounded-md text-xs font-semibold bg-zinc-950 text-emerald-400 border border-zinc-800 select-none flex items-center gap-1.5 cursor-pointer" title="클릭 시 계좌 잔고 새로고침">
-                <span class="text-zinc-500 font-sans">구매력:</span>
+                <span class="text-zinc-500 font-sans" data-i18n="buyingPowerLabel">구매력:</span>
                 <span id="buying-power-val" class="font-mono font-bold">$-</span>
             </div>
+            <button id="lang-toggle" onclick="toggleLanguage()" class="px-2.5 py-1 rounded-md border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-all select-none flex items-center gap-1.5 text-xs font-semibold" title="언어 전환 / Switch Language">
+                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                <span id="lang-toggle-text">English</span>
+            </button>
             <button id="theme-toggle" onclick="toggleTheme()" class="px-2.5 py-1 rounded-md border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-all select-none flex items-center gap-1.5 text-xs font-semibold" title="테마 전환">
                 <svg id="theme-toggle-dark-icon" class="w-3.5 h-3.5 text-amber-400 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z"/></svg>
                 <svg id="theme-toggle-light-icon" class="w-3.5 h-3.5 text-indigo-400 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
-                <span id="theme-toggle-text">다크</span>
+                <span id="theme-toggle-text" data-i18n="themeDark">다크</span>
             </button>
         </div>
     </div>
@@ -58,7 +62,7 @@
                                 <div class="p-1.5 bg-cyan-500/10 rounded-md">
                                     <svg class="w-4 h-4 ibm-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                 </div>
-                                <h2 class="text-sm font-bold ibm-accent">무한매수법 <span class="text-[10px] text-zinc-500 font-normal ml-1">V2.0 CLS</span></h2>
+                                <h2 class="text-sm font-bold ibm-accent"><span data-i18n="ibmTitle">무한매수법</span> <span class="text-[10px] text-zinc-500 font-normal ml-1">V2.0 CLS</span></h2>
                             </div>
                             <button onclick="fetchIBM()" class="p-1 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-cyan-400 transition-colors" title="데이터 수동 동기화">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
@@ -67,31 +71,31 @@
                         
                         <div class="grid grid-cols-3 gap-2">
                             <div class="relative">
-                                <label class="text-[10px] text-zinc-500 block mb-0.5">티커 실시간 검색</label>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="tickerLabel">티커 실시간 검색</label>
                                 <input type="text" id="ibm-ticker" value="SOXL" autocomplete="off" onkeydown="if(event.key==='Enter') fetchIBM()" class="w-full rounded-md p-1.5 text-xs uppercase font-bold text-center">
                                 <div id="ibm-suggests" class="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-md shadow-lg hidden z-50 max-h-48 overflow-y-auto"></div>
                             </div>
                             <div>
-                                <label class="text-[10px] text-zinc-500 block mb-0.5">예산($)</label>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="budgetLabel">예산($)</label>
                                 <input type="number" id="ibm-budget" value="10000" class="w-full rounded-md p-1.5 text-xs">
                             </div>
                             <div>
-                                <label class="text-[10px] text-zinc-500 block mb-0.5">division(일)</label>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="divisionLabel">division(일)</label>
                                 <input type="number" id="ibm-division" value="40" class="w-full rounded-md p-1.5 text-xs">
                             </div>
                         </div>
 
                         <div class="bg-zinc-950/60 rounded-md p-2.5 space-y-1.5 text-xs border border-zinc-800/60 font-mono">
-                            <div class="flex justify-between"><span class="text-zinc-400 font-sans">현재가 / 내 평단</span><span id="ibm-price" class="font-semibold">$- / $-</span></div>
-                            <div class="flex justify-between"><span class="text-zinc-400 font-sans">보유량 / 익절가</span><span id="ibm-qty" class="font-semibold text-cyan-400">- 주 / $-</span></div>
+                            <div class="flex justify-between"><span class="text-zinc-400 font-sans" data-i18n="ibmRow1">현재가 / 내 평단</span><span id="ibm-price" class="font-semibold">$- / $-</span></div>
+                            <div class="flex justify-between"><span class="text-zinc-400 font-sans" data-i18n="ibmRow2">보유량 / 익절가</span><span id="ibm-qty" class="font-semibold text-cyan-400">- 주 / $-</span></div>
                             <div class="flex justify-between border-t border-zinc-800/60 pt-1.5 text-zinc-400 font-sans">
-                                <span>금일 매수 예정 수량</span><span id="ibm-shares" class="font-bold text-zinc-100 font-mono">- 주</span>
+                                <span data-i18n="ibmRow3">금일 매수 예정 수량</span><span id="ibm-shares" class="font-bold text-zinc-100 font-mono">- 주</span>
                             </div>
                         </div>
 
                         <div id="ibm-chart-container" class="flex-1 min-h-[140px] rounded-md overflow-hidden border border-zinc-800/80 bg-zinc-950/40"></div>
                     </div>
-                    <button onclick="sendIBM()" class="w-full py-2 bg-cyan-700 hover:bg-cyan-600 rounded-md font-bold text-xs text-white transition-all active:scale-[0.99] mt-2">LOC 통합 주문 전송</button>
+                    <button onclick="sendIBM()" class="w-full py-2 bg-cyan-700 hover:bg-cyan-600 rounded-md font-bold text-xs text-white transition-all active:scale-[0.99] mt-2" data-i18n="ibmBtn">LOC 통합 주문 전송</button>
                 </div>
 
                 <div id="vr-card" class="card p-4 flex flex-col justify-between h-full hidden">
@@ -101,7 +105,7 @@
                                 <div class="p-1.5 bg-amber-500/10 rounded-md">
                                     <svg class="w-4 h-4 vr-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
                                 </div>
-                                <h2 class="text-sm font-bold vr-accent">밸류 리밸런싱 <span class="text-[10px] text-zinc-500 font-normal ml-1">Value Path</span></h2>
+                                <h2 class="text-sm font-bold vr-accent"><span data-i18n="vrTitle">밸류 리밸런싱</span> <span class="text-[10px] text-zinc-500 font-normal ml-1">Value Path</span></h2>
                             </div>
                             <button onclick="fetchVR()" class="p-1 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-amber-400 transition-colors" title="데이터 수동 동기화">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
@@ -110,55 +114,55 @@
 
                         <div class="grid grid-cols-2 gap-2">
                             <div class="relative">
-                                <label class="text-[10px] text-zinc-500 block mb-0.5">티커 실시간 검색</label>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="tickerLabel">티커 실시간 검색</label>
                                 <input type="text" id="vr-ticker" value="TQQQ" autocomplete="off" onkeydown="if(event.key==='Enter') fetchVR()" class="w-full rounded-md p-1.5 text-xs uppercase font-bold text-center">
                                 <div id="vr-suggests" class="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-md shadow-lg hidden z-50 max-h-48 overflow-y-auto"></div>
                             </div>
                             <div>
-                                <label class="text-[10px] text-zinc-500 block mb-0.5">현재 목표 밸류($)</label>
+                                <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="targetLabel">현재 목표 밸류($)</label>
                                 <input type="number" id="vr-target" value="20000" class="w-full rounded-md p-1.5 text-xs">
                             </div>
                         </div>
 
                         <div class="bg-zinc-950/60 rounded-md p-2.5 space-y-1.5 text-xs border border-zinc-800/60 font-mono">
-                            <div class="flex justify-between"><span class="text-zinc-400 font-sans">현재 자산 가치</span><span id="vr-current-val" class="font-semibold">$-</span></div>
-                            <div class="flex justify-between"><span class="text-zinc-400 font-sans">목표와의 차이 (Gap)</span><span id="vr-gap" class="font-semibold text-amber-400">$-</span></div>
+                            <div class="flex justify-between"><span class="text-zinc-400 font-sans" data-i18n="vrRow1">현재 자산 가치</span><span id="vr-current-val" class="font-semibold">$-</span></div>
+                            <div class="flex justify-between"><span class="text-zinc-400 font-sans" data-i18n="vrRow2">목표와의 차이 (Gap)</span><span id="vr-gap" class="font-semibold text-amber-400">$-</span></div>
                             <div class="flex justify-between border-t border-zinc-800/60 pt-1.5 text-zinc-400 font-sans">
-                                <span>수행할 동작</span><span id="vr-action" class="font-bold text-zinc-100 font-mono">-</span>
+                                <span data-i18n="vrRow3">수행할 동작</span><span id="vr-action" class="font-bold text-zinc-100 font-mono">-</span>
                             </div>
                         </div>
 
                         <div id="vr-chart-container" class="flex-1 min-h-[140px] rounded-md overflow-hidden border border-zinc-800/80 bg-zinc-950/40"></div>
                     </div>
-                    <button onclick="sendVR()" class="w-full py-2 bg-amber-600 hover:bg-amber-500 rounded-md font-bold text-xs text-white transition-all active:scale-[0.99] mt-2">리밸런싱 주문 실행</button>
+                    <button onclick="sendVR()" class="w-full py-2 bg-amber-600 hover:bg-amber-500 rounded-md font-bold text-xs text-white transition-all active:scale-[0.99] mt-2" data-i18n="vrBtn">리밸런싱 주문 실행</button>
                 </div>
             </div>
 
             <div class="card p-3.5 flex-shrink-0 mt-3 space-y-2.5">
                 <div class="flex items-center gap-2">
                     <div class="p-1 bg-rose-500/10 rounded-md"><svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg></div>
-                    <h2 class="text-xs font-bold text-rose-400">수동 개별 오더 보드 <span class="text-[10px] text-zinc-500 font-normal ml-1">실전 계정 전송</span></h2>
+                    <h2 class="text-xs font-bold text-rose-400"><span data-i18n="manualTitle">수동 개별 오더 보드</span> <span class="text-[10px] text-zinc-500 font-normal ml-1" data-i18n="manualSub">실전 계정 전송</span></h2>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div class="relative">
-                        <label class="text-[10px] text-zinc-500 block mb-0.5">티커 입력</label>
+                        <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="mTickerLabel">티커 입력</label>
                         <input type="text" id="m-ticker" value="TQQQ" autocomplete="off" class="w-full rounded-md p-1.5 text-xs uppercase font-semibold">
                         <div id="m-suggests" class="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-md shadow-lg hidden z-50 max-h-48 overflow-y-auto"></div>
                     </div>
                     <div>
-                        <label class="text-[10px] text-zinc-500 block mb-0.5">수량 (주)</label>
+                        <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="mQtyLabel">수량 (주)</label>
                         <input type="number" id="m-qty" placeholder="예: 5" class="w-full rounded-md p-1.5 text-xs">
                     </div>
                     <div>
-                        <label class="text-[10px] text-zinc-500 block mb-0.5">한도 가격 ($)</label>
+                        <label class="text-[10px] text-zinc-500 block mb-0.5" data-i18n="mPriceLabel">한도 가격 ($)</label>
                         <input type="number" id="m-price" placeholder="예: 75.50" class="w-full rounded-md p-1.5 text-xs">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-semibold">
-                    <button onclick="sendManual('BUY','LOC')" class="py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-all active:scale-[0.98]">LOC 매수</button>
-                    <button onclick="sendManual('SELL','LOC')" class="py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-all active:scale-[0.98]">LOC 매도</button>
-                    <button onclick="sendManual('BUY','LIMIT')" class="py-1.5 bg-amber-950/40 text-amber-400 border border-amber-900/60 hover:bg-amber-900/60 rounded-md transition-all active:scale-[0.98]">지정가 매수</button>
-                    <button onclick="sendManual('SELL','LIMIT')" class="py-1.5 bg-amber-950/40 text-amber-400 border border-amber-900/60 hover:bg-amber-900/60 rounded-md transition-all active:scale-[0.98]">지정가 매도</button>
+                    <button onclick="sendManual('BUY','LOC')" class="py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-all active:scale-[0.98]" data-i18n="mLocBuy">LOC 매수</button>
+                    <button onclick="sendManual('SELL','LOC')" class="py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-all active:scale-[0.98]" data-i18n="mLocSell">LOC 매도</button>
+                    <button onclick="sendManual('BUY','LIMIT')" class="py-1.5 bg-amber-950/40 text-amber-400 border border-amber-900/60 hover:bg-amber-900/60 rounded-md transition-all active:scale-[0.98]" data-i18n="mLimitBuy">지정가 매수</button>
+                    <button onclick="sendManual('SELL','LIMIT')" class="py-1.5 bg-amber-950/40 text-amber-400 border border-amber-900/60 hover:bg-amber-900/60 rounded-md transition-all active:scale-[0.98]" data-i18n="mLimitSell">지정가 매도</button>
                 </div>
             </div>
         </div>
@@ -167,7 +171,7 @@
             <div class="flex items-center justify-between border-b border-zinc-800 pb-2 mb-2.5">
                 <h2 class="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    주문 히스토리
+                    <span data-i18n="historyTitle">주문 히스토리</span>
                 </h2>
                 <button onclick="fetchOrders()" class="p-1 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-zinc-200 transition-colors" title="히스토리 새로고침">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
@@ -183,17 +187,71 @@
         <div class="bg-zinc-900 border border-zinc-800 rounded-lg max-w-md w-full p-5 space-y-3.5 shadow-xl transform scale-95 transition-transform duration-150" id="modal-box">
             <div class="flex items-center gap-2 border-b border-zinc-800 pb-2.5">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                <h3 id="modal-title" class="text-sm font-bold text-zinc-100">주문 승인 명세서</h3>
+                <h3 id="modal-title" class="text-sm font-bold text-zinc-100" data-i18n="modalDefaultTitle">주문 승인 명세서</h3>
             </div>
             <div class="my-3 max-h-64 overflow-y-auto pr-1">
                 <ul id="modal-details" class="space-y-2 text-xs text-zinc-300"></ul>
             </div>
-            <div class="text-[11px] text-zinc-400 bg-zinc-950 p-2.5 rounded-md border border-zinc-800/80 leading-relaxed">
+            <div class="text-[11px] text-zinc-400 bg-zinc-950 p-2.5 rounded-md border border-zinc-800/80 leading-relaxed" data-i18n="modalWarning">
                 ⚠️ <span class="text-amber-400 font-semibold">실전 계좌 경고:</span> 전송 시 자산이 즉시 체결 엔진으로 전달됩니다.
             </div>
             <div class="grid grid-cols-2 gap-2.5 pt-1">
-                <button onclick="closeOrderModal()" class="py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md text-xs font-bold text-zinc-300 transition-colors">주문 취소</button>
-                <button id="modal-confirm-btn" class="py-2 bg-amber-600 hover:bg-amber-500 rounded-md text-xs font-bold text-white transition-all">최종 주문 승인</button>
+                <button onclick="closeOrderModal()" class="py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md text-xs font-bold text-zinc-300 transition-colors" data-i18n="modalCancel">주문 취소</button>
+                <button id="modal-confirm-btn" class="py-2 bg-amber-600 hover:bg-amber-500 rounded-md text-xs font-bold text-white transition-all" data-i18n="modalConfirm">최종 주문 승인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔑 .env 파일 미존재 및 Alpaca API Key 미설정 알림 모달 -->
+    <div id="env-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden opacity-0 transition-all duration-150 p-4">
+        <div class="bg-zinc-900 border border-amber-500/40 rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl transform scale-95 transition-transform duration-150" id="env-modal-box">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-zinc-100" data-i18n="envModalTitle">Alpaca 계정 연동 필요</h3>
+                        <p class="text-[11px] text-zinc-400" data-i18n="envModalSub">.env 파일 및 API Key 설정이 필요합니다.</p>
+                    </div>
+                </div>
+                <button onclick="closeEnvModal()" class="text-zinc-500 hover:text-zinc-300 p-1 rounded-md">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs text-zinc-300">
+                <div class="bg-amber-950/40 border border-amber-900/60 p-3 rounded-lg text-amber-200 leading-relaxed" data-i18n="envModalBanner">
+                    ⚠️ <strong>계정 연동 필요:</strong> 주문을 생성하거나 집행하려면 Alpaca 계정의 <strong>API Key</strong>와 <strong>Secret Key</strong>를 연동해야 합니다.
+                </div>
+
+                <div class="space-y-2 bg-zinc-950 p-3 rounded-lg border border-zinc-800">
+                    <div class="text-[11px] font-semibold text-zinc-200" data-i18n="envFormTitle">🔑 API Key 직접 입력 및 자동 저장</div>
+                    <div>
+                        <label class="text-[10px] text-zinc-400 block mb-0.5" data-i18n="apiKeyLabel">LIVE API Key ID</label>
+                        <input type="text" id="env-api-key" placeholder="AKC2..." autocomplete="off" class="w-full rounded-md p-1.5 text-xs font-mono border-zinc-800">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-zinc-400 block mb-0.5" data-i18n="secretKeyLabel">LIVE Secret Key</label>
+                        <input type="password" id="env-secret-key" placeholder="Secret Key" autocomplete="off" class="w-full rounded-md p-1.5 text-xs font-mono border-zinc-800">
+                    </div>
+                    <button onclick="saveEnvKeys()" class="w-full py-2 mt-1 bg-emerald-600 hover:bg-emerald-500 rounded-md font-bold text-xs text-white transition-all shadow-md active:scale-[0.99]" data-i18n="envSaveBtn">
+                        🔑 Key 저장 및 연동하기
+                    </button>
+                </div>
+
+                <div class="pt-0.5">
+                    <a href="https://alpaca.markets/docs/trading/getting-started/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-semibold text-xs transition-colors hover:underline" data-i18n="envDocsLink">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        Alpaca API Key & Secret Key 발급 가이드 (공식 문서) ↗
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-zinc-800">
+                <button onclick="closeEnvModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md text-xs font-bold text-zinc-200 transition-colors" data-i18n="envCloseBtn">확인 (닫기)</button>
             </div>
         </div>
     </div>

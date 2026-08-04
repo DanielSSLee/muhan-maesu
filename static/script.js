@@ -1,6 +1,175 @@
 let curAcc = 'live';
 let vrData = null;
 let pendingOrderCallback = null; 
+let curLang = localStorage.getItem('lang') || 'ko';
+
+const translations = {
+    ko: {
+        subtitle: "라오어 무한매수법 & 밸류 리밸런싱 통합 관리 터미널",
+        vrToggle: "VR 전략 켜기",
+        liveAccount: "🔴 LIVE 계정",
+        buyingPowerLabel: "구매력:",
+        themeDark: "다크",
+        themeLight: "라이트",
+        ibmTitle: "무한매수법",
+        tickerLabel: "티커 실시간 검색",
+        budgetLabel: "예산($)",
+        divisionLabel: "division(일)",
+        ibmRow1: "현재가 / 내 평단",
+        ibmRow2: "보유량 / 익절가",
+        ibmRow3: "금일 매수 예정 수량",
+        ibmBtn: "LOC 통합 주문 전송",
+        vrTitle: "밸류 리밸런싱",
+        targetLabel: "현재 목표 밸류($)",
+        vrRow1: "현재 자산 가치",
+        vrRow2: "목표와의 차이 (Gap)",
+        vrRow3: "수행할 동작",
+        vrBtn: "리밸런싱 주문 실행",
+        manualTitle: "수동 개별 오더 보드",
+        manualSub: "실전 계정 전송",
+        mTickerLabel: "티커 입력",
+        mQtyLabel: "수량 (주)",
+        mPriceLabel: "한도 가격 ($)",
+        mLocBuy: "LOC 매수",
+        mLocSell: "LOC 매도",
+        mLimitBuy: "지정가 매수",
+        mLimitSell: "지정가 매도",
+        historyTitle: "주문 히스토리",
+        modalDefaultTitle: "주문 승인 명세서",
+        modalWarning: "⚠️ 실전 계좌 경고: 전송 시 자산이 즉시 체결 엔진으로 전달됩니다.",
+        modalCancel: "주문 취소",
+        modalConfirm: "최종 주문 승인",
+        envModalTitle: "Alpaca 계정 연동 필요",
+        envModalSub: ".env 파일 및 API Key 설정이 필요합니다.",
+        envModalBanner: "⚠️ 계정 연동 필요: 주문을 생성하거나 집행하려면 Alpaca 계정의 API Key와 Secret Key를 연동해야 합니다.",
+        envFormTitle: "🔑 API Key 직접 입력 및 자동 저장",
+        apiKeyLabel: "LIVE API Key ID",
+        secretKeyLabel: "LIVE Secret Key",
+        envSaveBtn: "🔑 Key 저장 및 연동하기",
+        envDocsLink: "Alpaca API Key & Secret Key 발급 가이드 (공식 문서) ↗",
+        envCloseBtn: "확인 (닫기)",
+        noHistory: "최근 주문 내역이 없습니다.",
+        fillAllFields: "티커 기호, 수량, 가격 설정을 모두 채워주세요."
+    },
+    en: {
+        subtitle: "Laoer Infinite Buy & Value Rebalancing Trading Terminal",
+        vrToggle: "Turn on VR Strategy",
+        liveAccount: "🔴 LIVE Account",
+        buyingPowerLabel: "Buying Power:",
+        themeDark: "Dark",
+        themeLight: "Light",
+        ibmTitle: "Infinite Buy",
+        tickerLabel: "Ticker Search",
+        budgetLabel: "Budget ($)",
+        divisionLabel: "Division (Days)",
+        ibmRow1: "Current / Avg Price",
+        ibmRow2: "Qty / Target Price",
+        ibmRow3: "Scheduled Buy Today",
+        ibmBtn: "Submit Integrated LOC Orders",
+        vrTitle: "Value Rebalancing",
+        targetLabel: "Target Value ($)",
+        vrRow1: "Current Portfolio Value",
+        vrRow2: "Gap from Target",
+        vrRow3: "Required Action",
+        vrBtn: "Execute Rebalancing Order",
+        manualTitle: "Manual Order Board",
+        manualSub: "Live Account Execution",
+        mTickerLabel: "Ticker",
+        mQtyLabel: "Quantity (Shares)",
+        mPriceLabel: "Limit Price ($)",
+        mLocBuy: "LOC Buy",
+        mLocSell: "LOC Sell",
+        mLimitBuy: "Limit Buy",
+        mLimitSell: "Limit Sell",
+        historyTitle: "Order History",
+        modalDefaultTitle: "Order Confirmation Summary",
+        modalWarning: "⚠️ Real Account Warning: Orders will be submitted immediately to the execution engine.",
+        modalCancel: "Cancel Order",
+        modalConfirm: "Confirm Final Order",
+        envModalTitle: "Alpaca Account Connection Required",
+        envModalSub: ".env file & API Key setup required.",
+        envModalBanner: "⚠️ Account Connection Required: You must connect your Alpaca API Key and Secret Key to place orders.",
+        envFormTitle: "🔑 Enter & Auto-Save API Keys",
+        apiKeyLabel: "LIVE API Key ID",
+        secretKeyLabel: "LIVE Secret Key",
+        envSaveBtn: "🔑 Save & Connect Keys",
+        envDocsLink: "Alpaca API Key & Secret Key Setup Guide (Official Docs) ↗",
+        envCloseBtn: "Close",
+        noHistory: "No recent order history.",
+        fillAllFields: "Please fill in Ticker, Quantity, and Price."
+    }
+};
+
+function applyLanguage(lang) {
+    curLang = lang;
+    localStorage.setItem('lang', lang);
+    const t = translations[lang] || translations.ko;
+
+    document.querySelectorAll('[data-i18n]').forEach(elem => {
+        const key = elem.getAttribute('data-i18n');
+        if (t[key]) {
+            elem.innerText = t[key];
+        }
+    });
+
+    const langText = document.getElementById('lang-toggle-text');
+    if (langText) {
+        langText.innerText = lang === 'ko' ? 'English' : '한국어';
+    }
+
+    const ibmInput = document.getElementById('ibm-ticker');
+    if (ibmInput && ibmInput.value) refreshChartWidget('ibm-chart-container', ibmInput.value.trim().toUpperCase());
+    const vrCard = document.getElementById('vr-card');
+    const vrInput = document.getElementById('vr-ticker');
+    if (vrCard && !vrCard.classList.contains('hidden') && vrInput && vrInput.value) {
+        refreshChartWidget('vr-chart-container', vrInput.value.trim().toUpperCase());
+    }
+
+    fetchIBM();
+    if (document.getElementById('vr-toggle').checked) fetchVR();
+    fetchOrders();
+}
+
+function toggleLanguage() {
+    const nextLang = curLang === 'ko' ? 'en' : 'ko';
+    applyLanguage(nextLang);
+}
+
+function initLanguage() {
+    const savedLang = localStorage.getItem('lang') || 'ko';
+    applyLanguage(savedLang);
+}
+
+async function saveEnvKeys() {
+    const apiKey = document.getElementById('env-api-key').value.trim();
+    const secretKey = document.getElementById('env-secret-key').value.trim();
+
+    if (!apiKey || !secretKey) {
+        alert(curLang === 'en' ? "Please enter both API Key and Secret Key." : "API Key와 Secret Key를 모두 입력해야 합니다.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/save-env', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: apiKey, secret_key: secretKey })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.detail || "Error saving credentials");
+            return;
+        }
+        alert(curLang === 'en' ? "Alpaca account successfully connected!" : "Alpaca 계정이 성공적으로 연동되었습니다!");
+        closeEnvModal();
+        fetchAccountInfo();
+        fetchIBM();
+        if (document.getElementById('vr-toggle').checked) fetchVR();
+        fetchOrders();
+    } catch(e) {
+        alert(curLang === 'en' ? "Failed to communicate with server." : "서버 통신 실패");
+    }
+}
 
 function toggleVRDisplay() {
     const isChecked = document.getElementById('vr-toggle').checked;
@@ -31,14 +200,14 @@ function applyTheme(theme) {
         document.documentElement.classList.add('light-mode');
         if (darkIcon) darkIcon.classList.remove('hidden');
         if (lightIcon) lightIcon.classList.add('hidden');
-        if (themeText) themeText.innerText = '라이트';
-        if (toggleBtn) toggleBtn.setAttribute('title', '스위치: 다크 모드로 변경');
+        if (themeText) themeText.innerText = curLang === 'en' ? 'Light' : '라이트';
+        if (toggleBtn) toggleBtn.setAttribute('title', curLang === 'en' ? 'Switch to Dark Mode' : '스위치: 다크 모드로 변경');
     } else {
         document.documentElement.classList.remove('light-mode');
         if (darkIcon) darkIcon.classList.add('hidden');
         if (lightIcon) lightIcon.classList.remove('hidden');
-        if (themeText) themeText.innerText = '다크';
-        if (toggleBtn) toggleBtn.setAttribute('title', '스위치: 라이트 모드로 변경');
+        if (themeText) themeText.innerText = curLang === 'en' ? 'Dark' : '다크';
+        if (toggleBtn) toggleBtn.setAttribute('title', curLang === 'en' ? 'Switch to Light Mode' : '스위치: 라이트 모드로 변경');
     }
     localStorage.setItem('theme', theme);
 }
@@ -48,7 +217,6 @@ function toggleTheme() {
     const next = current === 'dark' ? 'light' : 'dark';
     applyTheme(next);
 
-    // Refresh active TradingView charts with new theme
     const ibmTickerInput = document.getElementById('ibm-ticker');
     if (ibmTickerInput && ibmTickerInput.value) {
         refreshChartWidget('ibm-chart-container', ibmTickerInput.value.trim().toUpperCase());
@@ -75,7 +243,7 @@ function refreshChartWidget(containerId, ticker) {
             "timezone": "Asia/Seoul",
             "theme": activeTheme,
             "style": "1", 
-            "locale": "ko",
+            "locale": curLang === 'en' ? "en" : "ko",
             "toolbar_bg": activeTheme === 'dark' ? "#111827" : "#ffffff",
             "enable_publishing": false,
             "hide_top_toolbar": true,
@@ -109,7 +277,58 @@ function closeOrderModal() {
     pendingOrderCallback = null;
 }
 
-// 💡 [새로 추가] 히스토리 항목 클릭 시 세부 정보를 여닫는 아코디언 토글
+function openEnvModal(hasEnv = false) {
+    const modal = document.getElementById('env-modal');
+    const box = document.getElementById('env-modal-box');
+    const desc = document.getElementById('env-modal-desc');
+
+    if (desc) {
+        if (curLang === 'en') {
+            if (!hasEnv) {
+                desc.innerHTML = `No <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> file found in project root directory.<br>Please create a <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> file with your API credentials as shown below:`;
+            } else {
+                desc.innerHTML = `Valid Alpaca API Key or Secret Key not found in <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> file.<br>Please set your keys as shown below:`;
+            }
+        } else {
+            if (!hasEnv) {
+                desc.innerHTML = `프로젝트 루트 디렉토리에 <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> 파일이 존재하지 않습니다.<br>아래와 같이 <code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> 파일을 생성하고 API Key 및 Secret Key를 입력해 주세요:`;
+            } else {
+                desc.innerHTML = `<code class="bg-zinc-950 px-1.5 py-0.5 rounded text-amber-400 border border-zinc-800 font-mono">.env</code> 파일에 유효한 Alpaca API Key 또는 Secret Key가 설정되지 않았습니다.<br>아래와 같이 키를 설정해 주세요:`;
+            }
+        }
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        box.classList.remove('scale-95');
+    }, 10);
+}
+
+function closeEnvModal() {
+    const modal = document.getElementById('env-modal');
+    const box = document.getElementById('env-modal-box');
+    modal.classList.add('opacity-0');
+    box.classList.add('scale-95');
+    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+}
+
+async function checkEnvBeforeOrder() {
+    try {
+        const res = await fetch('/api/check-env');
+        if (res.ok) {
+            const status = await res.json();
+            if (!status.has_env || !status.has_keys) {
+                openEnvModal(status.has_env);
+                return false;
+            }
+        }
+    } catch(e) {
+        console.error("환경 변수 상태 확인 실패:", e);
+    }
+    return true;
+}
+
 function toggleOrderDetail(orderId) {
     const detailBox = document.getElementById('detail-' + orderId);
     if (detailBox.classList.contains('hidden')) {
@@ -119,7 +338,6 @@ function toggleOrderDetail(orderId) {
     }
 }
 
-// 💡 Alpaca 실시간 계좌 잔고 (구매력) 조회
 async function fetchAccountInfo() {
     try {
         const res = await fetch(`/api/account/${curAcc}`);
@@ -134,7 +352,6 @@ async function fetchAccountInfo() {
     }
 }
 
-// 💡 [새로 추가] 백엔드에서 주문 히스토리를 긁어와 리스트 UI를 그리는 메인 엔진
 async function fetchOrders() {
     try {
         const res = await fetch(`/api/orders/${curAcc}`);
@@ -143,28 +360,36 @@ async function fetchOrders() {
         container.innerHTML = '';
         
         if (data.length === 0) {
-            container.innerHTML = '<div class="text-xs text-zinc-500 text-center py-4">최근 주문 내역이 없습니다.</div>';
+            const emptyText = curLang === 'en' ? 'No recent order history.' : '최근 주문 내역이 없습니다.';
+            container.innerHTML = `<div class="text-xs text-zinc-500 text-center py-4">${emptyText}</div>`;
             return;
         }
 
         data.forEach(o => {
             const isBuy = o.side === 'BUY';
             const sideColor = isBuy ? 'text-emerald-400' : 'text-rose-400';
-            const sideText = isBuy ? '매수' : '매도';
+            const sideText = isBuy ? (curLang === 'en' ? 'BUY' : '매수') : (curLang === 'en' ? 'SELL' : '매도');
             
             let statusColor = 'text-zinc-500';
             let statusText = o.status;
             
-            // Alpaca 상태 코드를 직관적인 한글 뱃지로 치환
-            if (o.status === 'FILLED') { statusColor = 'text-cyan-400'; statusText = '체결완료'; }
-            else if (o.status === 'NEW' || o.status === 'ACCEPTED' || o.status === 'PENDING_NEW' || o.status === 'PARTIALLY_FILLED') { 
-                statusColor = 'text-amber-400'; statusText = '대기중'; 
-            }
-            else if (o.status === 'CANCELED' || o.status === 'REJECTED') { 
-                statusColor = 'text-rose-600'; statusText = '취소/거절'; 
+            if (o.status === 'FILLED') { 
+                statusColor = 'text-cyan-400'; 
+                statusText = curLang === 'en' ? 'Filled' : '체결완료'; 
+            } else if (o.status === 'NEW' || o.status === 'ACCEPTED' || o.status === 'PENDING_NEW' || o.status === 'PARTIALLY_FILLED') { 
+                statusColor = 'text-amber-400'; 
+                statusText = curLang === 'en' ? 'Pending' : '대기중'; 
+            } else if (o.status === 'CANCELED' || o.status === 'REJECTED') { 
+                statusColor = 'text-rose-600'; 
+                statusText = curLang === 'en' ? 'Canceled' : '취소/거절'; 
             }
 
-            const priceText = o.limit_price ? `$${o.limit_price}` : '시장가';
+            const priceText = o.limit_price ? `$${o.limit_price}` : (curLang === 'en' ? 'Market' : '시장가');
+            const unit = curLang === 'en' ? 'shares' : '주';
+            const typeLabel = curLang === 'en' ? 'Order Type' : '주문 유형';
+            const limitLabel = curLang === 'en' ? 'Limit Price' : '지정 가격';
+            const filledLabel = curLang === 'en' ? 'Filled Qty' : '체결 수량';
+            const idLabel = curLang === 'en' ? 'Order ID' : '주문 ID';
             
             const html = `
                 <div class="border border-zinc-800/60 rounded-md overflow-hidden bg-zinc-950/50 hover:border-zinc-700 transition-colors">
@@ -174,16 +399,16 @@ async function fetchOrders() {
                             <span class="text-[10px] text-zinc-500 mt-0.5">${o.submitted_at}</span>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-bold text-zinc-200">${o.qty}주</span>
+                            <span class="text-xs font-bold text-zinc-200">${o.qty} ${unit}</span>
                             <span class="text-[10px] font-semibold ${statusColor} mt-0.5">${statusText}</span>
                         </div>
                     </div>
                     <div id="detail-${o.id}" class="hidden px-3 pb-3 pt-1 border-t border-zinc-800/50 bg-zinc-900/30 text-[10px] text-zinc-400 space-y-1">
-                        <div class="flex justify-between"><span>주문 유형</span><span class="text-zinc-200">${o.type}</span></div>
-                        <div class="flex justify-between"><span>지정 가격</span><span class="text-zinc-200">${priceText}</span></div>
-                        <div class="flex justify-between"><span>체결 수량</span><span class="text-zinc-200">${o.filled_qty}주</span></div>
+                        <div class="flex justify-between"><span>${typeLabel}</span><span class="text-zinc-200">${o.type}</span></div>
+                        <div class="flex justify-between"><span>${limitLabel}</span><span class="text-zinc-200">${priceText}</span></div>
+                        <div class="flex justify-between"><span>${filledLabel}</span><span class="text-zinc-200">${o.filled_qty} ${unit}</span></div>
                         <div class="flex justify-between items-center mt-1 pt-1 border-t border-zinc-800/50">
-                            <span>주문 ID</span><span class="text-zinc-600 truncate max-w-[120px]" title="${o.id}">${o.id}</span>
+                            <span>${idLabel}</span><span class="text-zinc-600 truncate max-w-[120px]" title="${o.id}">${o.id}</span>
                         </div>
                     </div>
                 </div>
@@ -207,9 +432,10 @@ async function fetchIBM() {
         const res = await fetch(`/api/status/ibm/${curAcc}/${t}/${b}/${d}`);
         const data = await res.json();
         if(res.ok) {
+            const unit = curLang === 'en' ? 'shares' : '주';
             document.getElementById('ibm-price').innerText = `$${data.current_price} / $${data.avg_entry_price}`;
-            document.getElementById('ibm-qty').innerText = `${data.current_qty}주 / $${data.sell_target}`;
-            document.getElementById('ibm-shares').innerText = `${data.shares_per_half * 2}주`;
+            document.getElementById('ibm-qty').innerText = `${data.current_qty} ${unit} / $${data.sell_target}`;
+            document.getElementById('ibm-shares').innerText = `${data.shares_per_half * 2} ${unit}`;
         }
     } catch(e) { console.error("IBM 데이터 로드 실패"); }
 }
@@ -225,21 +451,41 @@ async function fetchVR() {
         const res = await fetch(`/api/status/vr/${curAcc}/${t}/${target}`);
         vrData = await res.json();
         if(res.ok) {
+            const unit = curLang === 'en' ? 'shares' : '주';
+            const actionText = vrData.gap > 0 ? (curLang === 'en' ? 'BUY' : '매수') : (curLang === 'en' ? 'SELL' : '매도');
             document.getElementById('vr-current-val').innerText = `$${vrData.current_value}`;
             document.getElementById('vr-gap').innerText = `$${vrData.gap}`;
-            document.getElementById('vr-action').innerText = `${vrData.action} ${vrData.required_qty}주`;
+            document.getElementById('vr-action').innerText = `${actionText} ${vrData.required_qty} ${unit}`;
             document.getElementById('vr-action').style.color = vrData.gap > 0 ? '#4ade80' : '#f87171';
         }
     } catch(e) { console.error("VR 데이터 로드 실패"); }
 }
 
 async function sendIBM() {
+    const isEnvValid = await checkEnvBeforeOrder();
+    if (!isEnvValid) return;
+
     const t = document.getElementById('ibm-ticker').value.trim().toUpperCase();
     const b = document.getElementById('ibm-budget').value;
     const d = document.getElementById('ibm-division').value;
     const sharesText = document.getElementById('ibm-shares').innerText;
 
-    const detailsHtml = `
+    const modalTitle = curLang === 'en' ? "Infinite Buy 4-Order Final Approval" : "무한매수법 4중 오더 최종 승인";
+
+    const detailsHtml = curLang === 'en' ? `
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Target Account</span><span class="font-bold text-rose-400">REAL Account</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Strategy</span><span class="font-semibold text-cyan-400">Infinite Buy V2.0 CLS (Custom 4-Orders)</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Ticker</span><span class="font-bold text-zinc-100 text-sm">${t}</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Schedule</span><span class="font-medium text-zinc-200">$${b} / ${d} Days Division</span></li>
+        <li class="flex justify-between pt-1"><span class="text-zinc-400 font-semibold">Total Buy Today</span><span class="font-bold text-emerald-400">${sharesText} (0.5x Split Each)</span></li>
+        <li class="flex flex-col gap-2 bg-zinc-950 p-3 rounded-md mt-3 text-[11px] text-zinc-400 border border-zinc-800/30 leading-relaxed">
+            <div class="text-zinc-500 font-semibold border-b border-zinc-900 pb-1 mb-1">📋 Scheduled 4-Order Execution Breakdown</div>
+            <div class="flex justify-between"><span>1️⃣ Buy: Average Price basis</span><span class="text-cyan-400 font-medium">LOC Buy</span></div>
+            <div class="flex justify-between"><span>2️⃣ Buy: Avg Price +5% basis</span><span class="text-cyan-400 font-medium">LOC Buy</span></div>
+            <div class="flex justify-between"><span>3️⃣ Sell: 25% of holdings (Avg+5% + $0.01)</span><span class="text-rose-400 font-medium">LOC Sell</span></div>
+            <div class="flex justify-between"><span>4️⃣ Sell: Remaining 75% (Avg+10.5%)</span><span class="text-amber-400 font-medium">Limit Sell (GTC)</span></div>
+        </li>
+    ` : `
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">지정 계좌</span><span class="font-bold text-rose-400">실전 REAL 계정</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">선택 전략</span><span class="font-semibold text-cyan-400">무한매수법 V2.0 CLS (Custom 4-Orders)</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">투자 종목</span><span class="font-bold text-zinc-100 text-sm">${t}</span></li>
@@ -254,24 +500,51 @@ async function sendIBM() {
         </li>
     `;
 
-    openOrderModal("무한매수법 4중 오더 최종 승인", detailsHtml, async () => {
-        const res = await fetch('/api/order/auto', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({account_type:curAcc, ticker:t, budget:b, division:d})
-        });
-        const d2 = await res.json(); 
-        alert(d2.message); 
-        fetchIBM();
-        fetchAccountInfo();
-        fetchOrders(); // 💡 주문 후 우측 히스토리 패널 및 잔고 자동 갱신
+    openOrderModal(modalTitle, detailsHtml, async () => {
+        try {
+            const res = await fetch('/api/order/auto', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({account_type:curAcc, ticker:t, budget:b, division:d})
+            });
+            const d2 = await res.json();
+            if (!res.ok) {
+                if (d2.detail && (d2.detail.error === 'MISSING_ENV' || (typeof d2.detail === 'string' && d2.detail.includes('.env')))) {
+                    openEnvModal(false);
+                    return;
+                }
+                alert(typeof d2.detail === 'string' ? d2.detail : (d2.detail?.message || "주문 실패"));
+                return;
+            }
+            alert(d2.message); 
+            fetchIBM();
+            fetchAccountInfo();
+            fetchOrders();
+        } catch(e) {
+            alert(curLang === 'en' ? "Error occurred during order request" : "주문 요청 중 오류 발생");
+        }
     });
 }
 
 async function sendVR() {
     if(!vrData) return;
+    const isEnvValid = await checkEnvBeforeOrder();
+    if (!isEnvValid) return;
+
     const t = document.getElementById('vr-ticker').value.trim().toUpperCase();
     const actionColor = vrData.gap > 0 ? 'text-emerald-400' : 'text-rose-400';
-    const detailsHtml = `
+    const sharesUnit = curLang === 'en' ? 'shares' : '주';
+    const actionText = vrData.action === 'BUY' ? (curLang === 'en' ? 'BUY' : '매수') : (curLang === 'en' ? 'SELL' : '매도');
+
+    const modalTitle = curLang === 'en' ? "Value Rebalancing Order Approval" : "밸류 리밸런싱 오더 승인";
+
+    const detailsHtml = curLang === 'en' ? `
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Target Account</span><span class="font-bold text-rose-400">REAL Account</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Strategy</span><span class="font-semibold text-amber-400">Value Rebalancing (Value Path)</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Ticker</span><span class="font-bold text-zinc-100 text-sm">${t}</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Target Value</span><span class="font-medium text-zinc-200">$${document.getElementById('vr-target').value}</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Asset Gap</span><span class="font-medium text-zinc-100">$${vrData.gap}</span></li>
+        <li class="flex justify-between pt-1"><span class="text-zinc-400 font-semibold">Final Order</span><span class="font-extrabold ${actionColor}">${actionText} ${vrData.required_qty} ${sharesUnit} (Market Day Order)</span></li>
+    ` : `
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">지정 계좌</span><span class="font-bold text-rose-400">실전 REAL 계정</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">선택 전략</span><span class="font-semibold text-amber-400">밸류 리밸런싱 (Value Path)</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">투자 종목</span><span class="font-bold text-zinc-100 text-sm">${t}</span></li>
@@ -279,16 +552,28 @@ async function sendVR() {
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">자산 괴리율 (Gap)</span><span class="font-medium text-zinc-100">$${vrData.gap}</span></li>
         <li class="flex justify-between pt-1"><span class="text-zinc-400 font-semibold">최종 거래 오더</span><span class="font-extrabold ${actionColor}">${vrData.action} ${vrData.required_qty}주 (당일 시장가)</span></li>
     `;
-    openOrderModal("밸류 리밸런싱 오더 승인", detailsHtml, async () => {
-        const res = await fetch('/api/order/vr', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({account_type:curAcc, ticker:t, qty:vrData.required_qty, action:vrData.action})
-        });
-        const d2 = await res.json(); 
-        alert(d2.message); 
-        fetchVR();
-        fetchAccountInfo();
-        fetchOrders(); // 💡 주문 후 우측 히스토리 패널 및 잔고 자동 갱신
+    openOrderModal(modalTitle, detailsHtml, async () => {
+        try {
+            const res = await fetch('/api/order/vr', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({account_type:curAcc, ticker:t, qty:vrData.required_qty, action:vrData.action})
+            });
+            const d2 = await res.json();
+            if (!res.ok) {
+                if (d2.detail && (d2.detail.error === 'MISSING_ENV' || (typeof d2.detail === 'string' && d2.detail.includes('.env')))) {
+                    openEnvModal(false);
+                    return;
+                }
+                alert(typeof d2.detail === 'string' ? d2.detail : (d2.detail?.message || "주문 실패"));
+                return;
+            }
+            alert(d2.message); 
+            fetchVR();
+            fetchAccountInfo();
+            fetchOrders();
+        } catch(e) {
+            alert(curLang === 'en' ? "Error occurred during rebalancing order" : "리밸런싱 주문 중 오류 발생");
+        }
     });
 }
 
@@ -296,11 +581,35 @@ async function sendManual(side, type) {
     const ticker = document.getElementById('m-ticker').value.trim().toUpperCase();
     const qty = document.getElementById('m-qty').value;
     const price = document.getElementById('m-price').value;
-    if(!ticker || !qty || !price) { alert("티커 기호, 수량, 가격 설정을 모두 채워주세요."); return; }
-    const typeStr = type === 'LOC' ? 'LOC (당일 장마감 동시호가 지정)' : 'LIMIT (지정가 무기한 GTC)';
-    const sideStr = side === 'BUY' ? '개별 수동 매수 기입' : '개별 수동 매도 기입';
+    if(!ticker || !qty || !price) {
+        alert(curLang === 'en' ? "Please fill in Ticker, Quantity, and Price." : "티커 기호, 수량, 가격 설정을 모두 채워주세요.");
+        return;
+    }
+
+    const isEnvValid = await checkEnvBeforeOrder();
+    if (!isEnvValid) return;
+
+    const modalTitle = curLang === 'en' ? "Manual Order Approval" : "수동 개별 오더 승인";
+    const sharesUnit = curLang === 'en' ? 'shares' : '주';
+
+    const typeStr = type === 'LOC' 
+        ? (curLang === 'en' ? 'LOC (Market Close Limit)' : 'LOC (당일 장마감 동시호가 지정)') 
+        : (curLang === 'en' ? 'LIMIT (Good-Til-Canceled)' : 'LIMIT (지정가 무기한 GTC)');
+    
+    const sideStr = side === 'BUY' 
+        ? (curLang === 'en' ? 'Manual Buy Submission' : '개별 수동 매수 기입') 
+        : (curLang === 'en' ? 'Manual Sell Submission' : '개별 수동 매도 기입');
+    
     const sideColor = side === 'BUY' ? 'text-emerald-400' : 'text-rose-400';
-    const detailsHtml = `
+
+    const detailsHtml = curLang === 'en' ? `
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Target Account</span><span class="font-bold text-rose-400">REAL Account</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Strategy</span><span class="font-semibold text-rose-400">Manual Order Board</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Ticker</span><span class="font-bold text-zinc-100 text-sm">${ticker}</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Execution Type</span><span class="font-medium text-zinc-200">${typeStr}</span></li>
+        <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">Qty / Price</span><span class="font-medium text-zinc-200">${qty} ${sharesUnit} / $${price}</span></li>
+        <li class="flex justify-between pt-1"><span class="text-zinc-400 font-semibold">Final Action</span><span class="font-extrabold ${sideColor}">${sideStr}</span></li>
+    ` : `
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">지정 계좌</span><span class="font-bold text-rose-400">실전 REAL 계정</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">선택 전략</span><span class="font-semibold text-rose-400">수동 개별 오더 보드</span></li>
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">투자 종목</span><span class="font-bold text-zinc-100 text-sm">${ticker}</span></li>
@@ -308,19 +617,29 @@ async function sendManual(side, type) {
         <li class="flex justify-between border-b border-zinc-800/60 pb-1.5"><span class="text-zinc-500">신청 수량 / 가격</span><span class="font-medium text-zinc-200">${qty}주 / $${price}</span></li>
         <li class="flex justify-between pt-1"><span class="text-zinc-400 font-semibold">최종 수동 거래</span><span class="font-extrabold ${sideColor}">${sideStr} 전송</span></li>
     `;
-    openOrderModal("수동 개별 오더 승인", detailsHtml, async () => {
+    openOrderModal(modalTitle, detailsHtml, async () => {
         try {
             const res = await fetch('/api/order/manual', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ account_type: curAcc, ticker, qty, price, side, type })
             });
             const data = await res.json(); 
+            if (!res.ok) {
+                if (data.detail && (data.detail.error === 'MISSING_ENV' || (typeof data.detail === 'string' && data.detail.includes('.env')))) {
+                    openEnvModal(false);
+                    return;
+                }
+                alert(typeof data.detail === 'string' ? data.detail : (data.detail?.message || "수동 주문 실패"));
+                return;
+            }
             alert(data.message || data.detail); 
             fetchIBM(); 
             if(document.getElementById('vr-toggle').checked) fetchVR();
             fetchAccountInfo();
-            fetchOrders(); // 💡 주문 후 우측 히스토리 패널 및 잔고 자동 갱신
-        } catch(e) { alert("수동 주문 통신 에러 발생"); }
+            fetchOrders();
+        } catch(e) {
+            alert(curLang === 'en' ? "Error occurred during manual order submission" : "수동 주문 통신 에러 발생");
+        }
     });
 }
 
@@ -353,10 +672,11 @@ function bindAutocompleteEngine(inputId, suggestBoxId, selectCallback) {
 }
 
 window.onload = () => { 
+    initLanguage();
     initTheme();
-    fetchAccountInfo(); // 💡 초기 구동 시 실시간 구매력 잔고 불러오기
+    fetchAccountInfo();
     fetchIBM(); 
-    fetchOrders(); // 💡 초기 구동 시 주문 히스토리 불러오기
+    fetchOrders();
     bindAutocompleteEngine('ibm-ticker', 'ibm-suggests', fetchIBM);
     bindAutocompleteEngine('vr-ticker', 'vr-suggests', fetchVR);
     bindAutocompleteEngine('m-ticker', 'm-suggests', () => {});
