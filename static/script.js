@@ -250,26 +250,32 @@ function initTheme() {
 }
 
 function refreshChartWidget(containerId, ticker) {
-    const activeTheme = getCurrentTheme();
-    if (document.getElementById(containerId)) {
-        new TradingView.widget({
-            "autosize": true,
-            "symbol": ticker, 
-            "interval": "D",
-            "timezone": "Asia/Seoul",
-            "theme": activeTheme,
-            "style": "1", 
-            "locale": curLang === 'en' ? "en" : "ko",
-            "toolbar_bg": activeTheme === 'dark' ? "#111827" : "#ffffff",
-            "enable_publishing": false,
-            "hide_top_toolbar": true,
-            "hide_legend": true,
-            "save_image": false,
-            "extended_hours": true, 
-            "container_id": containerId
-        });
+    try {
+        const activeTheme = getCurrentTheme();
+        const container = document.getElementById(containerId);
+        if (container && typeof TradingView !== 'undefined' && TradingView.widget) {
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": ticker, 
+                "interval": "D",
+                "timezone": "Asia/Seoul",
+                "theme": activeTheme,
+                "style": "1", 
+                "locale": curLang === 'en' ? "en" : "ko",
+                "toolbar_bg": activeTheme === 'dark' ? "#111827" : "#ffffff",
+                "enable_publishing": false,
+                "hide_top_toolbar": true,
+                "hide_legend": true,
+                "save_image": false,
+                "extended_hours": true, 
+                "container_id": containerId
+            });
+        }
+    } catch (e) {
+        console.warn("TradingView widget loading skipped/failed:", e);
     }
 }
+
 
 function openOrderModal(title, detailsHtml, confirmCallback) {
     document.getElementById('modal-title').innerText = title;
@@ -689,10 +695,22 @@ window.onload = () => {
     bindAutocompleteEngine('ibm-ticker', 'ibm-suggests', fetchIBM);
     bindAutocompleteEngine('vr-ticker', 'vr-suggests', fetchVR);
     bindAutocompleteEngine('m-ticker', 'm-suggests', () => {});
-    document.getElementById('ibm-ticker').addEventListener('change', fetchIBM);
-    document.getElementById('vr-ticker').addEventListener('change', fetchVR);
-    document.getElementById('modal-confirm-btn').onclick = () => {
-        if (pendingOrderCallback) pendingOrderCallback();
-        closeOrderModal();
-    };
-};
+    
+    const ibmInput = document.getElementById('ibm-ticker');
+    if (ibmInput) ibmInput.addEventListener('change', fetchIBM);
+    const vrInput = document.getElementById('vr-ticker');
+    if (vrInput) vrInput.addEventListener('change', fetchVR);
+
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            if (pendingOrderCallback) pendingOrderCallback();
+            closeOrderModal();
+        };
+    }
+
+    if (!localStorage.getItem('alpaca_api_key') || !localStorage.getItem('alpaca_secret_key')) {
+        setTimeout(openEnvModal, 300);
+    }
+};
+
