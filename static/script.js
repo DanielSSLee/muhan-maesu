@@ -60,7 +60,9 @@ const translations = {
         envDocsLink: "Alpaca API Key & Secret Key 발급 가이드 (공식 문서) ↗",
         envCloseBtn: "확인 (닫기)",
         noHistory: "최근 주문 내역이 없습니다.",
-        fillAllFields: "티커 기호, 수량, 가격 설정을 모두 채워주세요."
+        fillAllFields: "티커 기호, 수량, 가격 설정을 모두 채워주세요.",
+        mTabAll: "전체 보기",
+        mTabManual: "수동주문"
     },
     en: {
         subtitle: "Laoer Infinite Buy & Value Rebalancing Trading Terminal",
@@ -109,7 +111,9 @@ const translations = {
         envDocsLink: "Alpaca API Key & Secret Key Setup Guide (Official Docs) ↗",
         envCloseBtn: "Close",
         noHistory: "No recent order history.",
-        fillAllFields: "Please fill in Ticker, Quantity, and Price."
+        fillAllFields: "Please fill in Ticker, Quantity, and Price.",
+        mTabAll: "View All",
+        mTabManual: "Manual"
     }
 };
 
@@ -187,6 +191,104 @@ function clearEnvKeys() {
     fetchOrders();
 }
 
+let currentMobileTab = 'all';
+
+function switchMobileTab(tab) {
+    currentMobileTab = tab;
+    
+    const tabs = ['all', 'ibm', 'vr', 'manual', 'history'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`mtab-${t}`);
+        if (btn) {
+            if (t === tab) {
+                btn.className = "mobile-tab-btn flex-1 py-2 rounded-lg text-center transition-all bg-zinc-800 text-white font-bold shadow-sm border border-zinc-700/60";
+            } else {
+                btn.className = "mobile-tab-btn flex-1 py-2 rounded-lg text-center transition-all text-zinc-400 hover:text-white font-normal";
+            }
+        }
+    });
+
+    const grid = document.getElementById('strategy-grid');
+    const ibmCard = document.querySelector('#strategy-grid > div:first-child');
+    const vrCard = document.getElementById('vr-card');
+    const manualCard = document.getElementById('manual-card');
+    const historyCard = document.getElementById('history-card');
+    const mainCol = grid ? grid.parentElement : null;
+
+    if (window.innerWidth < 1024) {
+        if (tab === 'all') {
+            if (mainCol) mainCol.style.display = 'flex';
+            if (grid) grid.style.display = 'grid';
+            if (ibmCard) ibmCard.style.display = 'flex';
+            if (vrCard) {
+                vrCard.style.display = 'flex';
+                vrCard.classList.remove('hidden');
+                fetchVR();
+            }
+            if (manualCard) {
+                manualCard.style.display = 'block';
+                manualCard.classList.add('mt-3');
+            }
+            if (historyCard) historyCard.style.display = 'flex';
+        } else if (tab === 'ibm') {
+            if (mainCol) mainCol.style.display = 'flex';
+            if (grid) grid.style.display = 'grid';
+            if (ibmCard) ibmCard.style.display = 'flex';
+            if (vrCard) vrCard.style.display = 'none';
+            if (manualCard) manualCard.style.display = 'none';
+            if (historyCard) historyCard.style.display = 'none';
+        } else if (tab === 'vr') {
+            if (mainCol) mainCol.style.display = 'flex';
+            if (grid) grid.style.display = 'grid';
+            if (ibmCard) ibmCard.style.display = 'none';
+            if (vrCard) {
+                vrCard.style.display = 'flex';
+                vrCard.classList.remove('hidden');
+                fetchVR();
+            }
+            if (manualCard) manualCard.style.display = 'none';
+            if (historyCard) historyCard.style.display = 'none';
+        } else if (tab === 'manual') {
+            if (mainCol) mainCol.style.display = 'flex';
+            if (grid) grid.style.display = 'none';
+            if (ibmCard) ibmCard.style.display = 'none';
+            if (vrCard) vrCard.style.display = 'none';
+            if (manualCard) {
+                manualCard.style.display = 'block';
+                manualCard.classList.remove('mt-3');
+            }
+            if (historyCard) historyCard.style.display = 'none';
+        } else if (tab === 'history') {
+            if (mainCol) mainCol.style.display = 'none';
+            if (grid) grid.style.display = 'none';
+            if (ibmCard) ibmCard.style.display = 'none';
+            if (vrCard) vrCard.style.display = 'none';
+            if (manualCard) manualCard.style.display = 'none';
+            if (historyCard) historyCard.style.display = 'flex';
+        }
+    } else {
+        if (mainCol) mainCol.style.display = '';
+        if (grid) grid.style.display = '';
+        if (ibmCard) ibmCard.style.display = '';
+        if (vrCard) {
+            const isVrChecked = document.getElementById('vr-toggle')?.checked;
+            vrCard.style.display = isVrChecked ? '' : 'none';
+            if (!isVrChecked) vrCard.classList.add('hidden');
+        }
+        if (manualCard) {
+            manualCard.style.display = '';
+            manualCard.classList.add('mt-3');
+        }
+        if (historyCard) historyCard.style.display = '';
+    }
+}
+
+window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+        switchMobileTab('all');
+    }
+});
+
 function toggleVRDisplay() {
     const isChecked = document.getElementById('vr-toggle').checked;
     const vrCard = document.getElementById('vr-card');
@@ -199,6 +301,7 @@ function toggleVRDisplay() {
     } else {
         vrCard.classList.add('hidden');
         grid.classList.replace('lg:grid-cols-2', 'lg:grid-cols-1');
+        if (currentMobileTab === 'vr') switchMobileTab('all');
     }
 }
 
@@ -287,6 +390,7 @@ function openOrderModal(title, detailsHtml, confirmCallback) {
     setTimeout(() => {
         modal.classList.remove('opacity-0');
         box.classList.remove('scale-95');
+        box.classList.add('scale-100');
     }, 10);
 }
 
@@ -294,6 +398,7 @@ function closeOrderModal() {
     const modal = document.getElementById('order-modal');
     const box = document.getElementById('modal-box');
     modal.classList.add('opacity-0');
+    box.classList.remove('scale-100');
     box.classList.add('scale-95');
     setTimeout(() => { modal.classList.add('hidden'); }, 200);
     pendingOrderCallback = null;
@@ -312,6 +417,7 @@ function openEnvModal() {
     setTimeout(() => {
         modal.classList.remove('opacity-0');
         box.classList.remove('scale-95');
+        box.classList.add('scale-100');
     }, 10);
 }
 
@@ -319,6 +425,7 @@ function closeEnvModal() {
     const modal = document.getElementById('env-modal');
     const box = document.getElementById('env-modal-box');
     modal.classList.add('opacity-0');
+    box.classList.remove('scale-100');
     box.classList.add('scale-95');
     setTimeout(() => { modal.classList.add('hidden'); }, 200);
 }
