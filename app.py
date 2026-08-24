@@ -197,7 +197,8 @@ def send_auto_orders(data: dict, request: Request):
             orders_desc = []
 
             if sell_qty_25 > 0:
-                sell_price_25 = round((avg_entry_price * 1.05) + 0.01, 2)
+                sell_price_25 = round((avg_entry_price * 1.05), 2)
+                sell_price_25 =+ 0.01
                 sell_order_25 = LimitOrderRequest(
                     symbol=ticker, qty=sell_qty_25, limit_price=sell_price_25,
                     side=OrderSide.SELL, time_in_force=TimeInForce.CLS
@@ -206,7 +207,7 @@ def send_auto_orders(data: dict, request: Request):
                 orders_desc.append(f"25% LOC 매도({sell_qty_25}주, ${sell_price_25:.2f})")
 
             if sell_qty_75 > 0:
-                sell_price_75 = round(avg_entry_price * 1.105, 2)
+                sell_price_75 = round(avg_entry_price * 1.10, 2)
                 sell_order_75 = LimitOrderRequest(
                     symbol=ticker, qty=sell_qty_75, limit_price=sell_price_75,
                     side=OrderSide.SELL, time_in_force=TimeInForce.DAY
@@ -332,4 +333,4 @@ def index():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
-
+
