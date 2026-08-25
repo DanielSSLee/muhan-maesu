@@ -196,15 +196,15 @@ def send_auto_orders(data: dict, request: Request):
             sell_qty_75 = int(current_qty - sell_qty_25)
             orders_desc = []
 
-            if current_qty = 1:
+            if current_qty == 1:
                 sell_qty_25 = 1
                 sell_qty_75 = 0
 
-            if current_qty = 2:
+            if current_qty == 2:
                 sell_qty_25 = 1
                 sell_qty_75 = 1
 
-            if current_qty = 3:
+            if current_qty == 3:
                 sell_qty_25 = 1
                 sell_qty_75 = 2
 
