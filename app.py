@@ -210,7 +210,7 @@ def send_auto_orders(data: dict, request: Request):
 
             if sell_qty_25 > 0:
                 sell_price_25 = round((avg_entry_price * 1.05), 2)
-                sell_price_25 =+ 0.01
+                sell_price_25 =  sell_price_25 + 0.03
                 sell_order_25 = LimitOrderRequest(
                     symbol=ticker, qty=sell_qty_25, limit_price=sell_price_25,
                     side=OrderSide.SELL, time_in_force=TimeInForce.CLS
