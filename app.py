@@ -1,6 +1,7 @@
 import os
 import math
 import traceback
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +33,25 @@ ACCOUNTS = {
 }
 
 ALL_ASSETS_CACHE = []
+
+
+def _to_decimal(value, default=0):
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal(str(default))
+
+
+def _round_money(value, digits=2):
+    return float(_to_decimal(value, 0).quantize(Decimal("1." + ("0" * digits)), rounding=ROUND_HALF_UP))
+
+
+def _clean_qty(value):
+    qty = _to_decimal(value, 0)
+    qty = qty.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    qty_float = float(qty)
+    return int(qty_float) if qty_float.is_integer() else qty_float
+
 
 def get_alpaca_clients(request: Request, account_type: str = "live"):
     if account_type not in ACCOUNTS:
@@ -83,10 +103,10 @@ def get_account_info(account_type: str, request: Request):
         trade_client, _ = get_alpaca_clients(request, account_type)
         acc = trade_client.get_account()
         return {
-            "buying_power": float(acc.buying_power),
-            "cash": float(acc.cash),
-            "portfolio_value": float(acc.portfolio_value),
-            "equity": float(acc.equity),
+            "buying_power": _round_money(acc.buying_power),
+            "cash": _round_money(acc.cash),
+            "portfolio_value": _round_money(acc.portfolio_value),
+            "equity": _round_money(acc.equity),
             "currency": acc.currency
         }
     except HTTPException:
@@ -144,11 +164,11 @@ def get_ibm_status(account_type: str, ticker: str, budget: float, division: int,
         except: pass
 
         return {
-            "current_price": round(current_price, 2),
-            "avg_entry_price": round(avg_entry_price, 2),
-            "current_qty": current_qty,
+            "current_price": _round_money(current_price),
+            "avg_entry_price": _round_money(avg_entry_price),
+            "current_qty": _clean_qty(current_qty),
             "shares_per_half": shares_per_half,
-            "sell_target": round(avg_entry_price * 1.1, 2)
+            "sell_target": _round_money(avg_entry_price * 1.1)
         }
     except Exception as e:
         traceback.print_exc()
@@ -175,14 +195,14 @@ def send_auto_orders(data: dict, request: Request):
         for order in open_sell_orders: 
             trade_client.cancel_order_by_id(order.id)
 
-        loc_avg_price = round(avg_entry_price, 2)
+        loc_avg_price = _round_money(avg_entry_price)
         loc_avg_order = LimitOrderRequest(
             symbol=ticker, qty=buy_qty, limit_price=loc_avg_price, 
             side=OrderSide.BUY, time_in_force=TimeInForce.CLS
         )
         trade_client.submit_order(loc_avg_order)
 
-        loc_high_price = round(avg_entry_price * 1.05, 2)
+        loc_high_price = _round_money(avg_entry_price * 1.05)
         loc_high_order = LimitOrderRequest(
             symbol=ticker, qty=buy_qty, limit_price=loc_high_price, 
             side=OrderSide.BUY, time_in_force=TimeInForce.CLS
@@ -192,25 +212,24 @@ def send_auto_orders(data: dict, request: Request):
         msg = f"첫 진입 매수 LOC 2건 전송 완료! (현재 보유 수량 없음)"
         
         if current_qty > 0:
-            sell_qty_25 = math.floor(current_qty * 0.25)
-            sell_qty_75 = int(current_qty - sell_qty_25)
+            sell_qty_25 = int(math.floor(float(current_qty) * 0.25))
+            sell_qty_75 = int(float(current_qty) - sell_qty_25)
             orders_desc = []
 
-            if current_qty == 1:
+            if float(current_qty) == 1:
                 sell_qty_25 = 1
                 sell_qty_75 = 0
 
-            if current_qty == 2:
+            if float(current_qty) == 2:
                 sell_qty_25 = 1
                 sell_qty_75 = 1
 
-            if current_qty == 3:
+            if float(current_qty) == 3:
                 sell_qty_25 = 1
                 sell_qty_75 = 2
 
             if sell_qty_25 > 0:
-                sell_price_25 = round((avg_entry_price * 1.05), 2)
-                sell_price_25 =  sell_price_25 + 0.03
+                sell_price_25 = _round_money(avg_entry_price * 1.05 + 0.03)
                 sell_order_25 = LimitOrderRequest(
                     symbol=ticker, qty=sell_qty_25, limit_price=sell_price_25,
                     side=OrderSide.SELL, time_in_force=TimeInForce.CLS
@@ -219,7 +238,7 @@ def send_auto_orders(data: dict, request: Request):
                 orders_desc.append(f"25% LOC 매도({sell_qty_25}주, ${sell_price_25:.2f})")
 
             if sell_qty_75 > 0:
-                sell_price_75 = round(avg_entry_price * 1.10, 2)
+                sell_price_75 = _round_money(avg_entry_price * 1.10)
                 sell_order_75 = LimitOrderRequest(
                     symbol=ticker, qty=sell_qty_75, limit_price=sell_price_75,
                     side=OrderSide.SELL, time_in_force=TimeInForce.DAY
@@ -259,13 +278,13 @@ def get_vr_status(account_type: str, ticker: str, target_value: float, request: 
 
         current_portfolio_value = current_qty * current_price
         gap = target_value - current_portfolio_value
-        required_qty = round(abs(gap) / current_price, 2)
+        required_qty = _clean_qty(abs(gap) / current_price)
 
         return {
-            "current_price": round(current_price, 2),
-            "current_qty": current_qty,
-            "current_value": round(current_portfolio_value, 2),
-            "gap": round(gap, 2),
+            "current_price": _round_money(current_price),
+            "current_qty": _clean_qty(current_qty),
+            "current_value": _round_money(current_portfolio_value),
+            "gap": _round_money(gap),
             "required_qty": required_qty,
             "action": "BUY" if gap > 0 else "SELL"
         }
@@ -280,7 +299,7 @@ def send_vr_order(data: dict, request: Request):
     try:
         trade_client, _ = get_alpaca_clients(request, data['account_type'])
         ticker = data['ticker']
-        qty = float(data['qty'])
+        qty = _clean_qty(data['qty'])
         side = OrderSide.BUY if data['action'] == "BUY" else OrderSide.SELL
         
         order = MarketOrderRequest(symbol=ticker, qty=qty, side=side, time_in_force=TimeInForce.DAY)
@@ -297,8 +316,8 @@ def send_manual_order(data: dict, request: Request):
     try:
         account_type = data.get("account_type")
         ticker = data.get("ticker")
-        qty = float(data.get("qty"))
-        price = round(float(data.get("price")), 2)
+        qty = _clean_qty(data.get("qty"))
+        price = _round_money(data.get("price"))
         side = OrderSide.BUY if data.get("side") == "BUY" else OrderSide.SELL
         tif = TimeInForce.CLS if data.get("type") == "LOC" else TimeInForce.GTC
 
@@ -324,12 +343,12 @@ def get_order_history(account_type: str, request: Request):
             history.append({
                 "id": str(o.id),
                 "symbol": o.symbol,
-                "qty": float(o.qty) if o.qty else 0,
-                "filled_qty": float(o.filled_qty) if o.filled_qty else 0,
+                "qty": _clean_qty(o.qty) if o.qty else 0,
+                "filled_qty": _clean_qty(o.filled_qty) if o.filled_qty else 0,
                 "side": o.side.name, # BUY or SELL
                 "type": o.order_type.name if o.order_type else "UNKNOWN",
                 "status": o.status.name,
-                "limit_price": float(o.limit_price) if o.limit_price else None,
+                "limit_price": _round_money(o.limit_price) if o.limit_price else None,
                 "submitted_at": o.submitted_at.strftime("%m-%d %H:%M") if o.submitted_at else ""
             })
         return history
@@ -345,4 +364,3 @@ def index():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
-
